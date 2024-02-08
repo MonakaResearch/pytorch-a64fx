@@ -1,11 +1,17 @@
 #pragma once
 
-#include <c10/util/Exception.h>
-#include <cstdlib>
-#include <cstring>
+#include <c10/macros/Export.h>
 #include <optional>
+#include <string>
 
 namespace c10::utils {
+
+// Checks an environment variable is set.
+C10_API bool has_env(const char* name);
+
+// Reads an environment variable and returns the content if it is set.
+C10_API std::optional<std::string> get_env(const char* name);
+
 // Reads an environment variable and returns
 // - optional<true>,              if set equal to "1"
 // - optional<false>,             if set equal to "0"
@@ -13,29 +19,5 @@ namespace c10::utils {
 //
 // NB:
 // Issues a warning if the value of the environment variable is not 0 or 1.
-inline std::optional<bool> check_env(const char* name) {
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable : 4996)
-#endif
-  auto envar = std::getenv(name);
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
-  if (envar) {
-    if (strcmp(envar, "0") == 0) {
-      return false;
-    }
-    if (strcmp(envar, "1") == 0) {
-      return true;
-    }
-    TORCH_WARN(
-        "Ignoring invalid value for boolean flag ",
-        name,
-        ": ",
-        envar,
-        "valid values are 0 or 1.");
-  }
-  return std::nullopt;
-}
+C10_API std::optional<bool> check_env(const char* name);
 } // namespace c10::utils
