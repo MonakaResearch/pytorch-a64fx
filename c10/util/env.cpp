@@ -1,11 +1,47 @@
 #include <c10/util/Exception.h>
 #include <c10/util/env.h>
+#include <fmt/format.h>
 #include <cstdlib>
 #include <shared_mutex>
 
 namespace c10::utils {
 
 static std::shared_mutex env_mutex;
+
+// Set an environment variable.
+void set_env(const char* name, const char* value, bool overwrite) {
+  std::lock_guard lk(env_mutex);
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4996)
+#endif
+#ifdef _MSC_VER
+  if (!overwrite) {
+    // NOLINTNEXTLINE(concurrency-mt-unsafe)
+    if (std::getenv(name) != nullptr) {
+      return;
+    }
+  }
+  auto full_env_variable = fmt::format("{}={}", name, value);
+  // NOLINTNEXTLINE(concurrency-mt-unsafe)
+  auto err = putenv(full_env_variable.c_str());
+  if (err != 0) {
+    TORCH_INTERNAL_ASSERT(
+        "putenv failed for environment \"", name, "\", the error is: ", err);
+  }
+#else
+  // NOLINTNEXTLINE(concurrency-mt-unsafe)
+  auto err = setenv(name, value, static_cast<int>(overwrite));
+  if (err != 0) {
+    TORCH_INTERNAL_ASSERT(
+        "setenv failed for environment \"", name, "\", the error is: ", err);
+  }
+#endif
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+  return;
+}
 
 // Checks an environment variable is set.
 bool has_env(const char* name) {

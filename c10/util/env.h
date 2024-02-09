@@ -6,6 +6,12 @@
 
 namespace c10::utils {
 
+// Set an environment variable.
+C10_API void set_env(
+    const char* name,
+    const char* value,
+    bool overwrite = true);
+
 // Checks an environment variable is set.
 C10_API bool has_env(const char* name);
 
