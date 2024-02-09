@@ -34,7 +34,7 @@ std::optional<std::string> get_env(const char* name) {
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
-  if (envar) {
+  if (envar != nullptr) {
     return std::string(envar);
   }
   return std::nullopt;

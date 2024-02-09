@@ -81,8 +81,8 @@ bool dsa_check_if_all_devices_support_managed_memory() {
 }
 
 bool env_flag_set(const char* env_var_name) {
-  const auto env_string = c10::utils::get_env(env_var_name);
-  return !env_string ? false : env_string.value() == "0";
+  const auto env_flag = c10::utils::check_env(env_var_name);
+  return env_flag.has_value() && env_flag.value();
 }
 
 /// Deleter for UVM/managed memory pointers

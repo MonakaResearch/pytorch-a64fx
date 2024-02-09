@@ -6,9 +6,9 @@ namespace c10::cuda {
 
 const char* get_cuda_check_suffix() noexcept {
   static auto device_blocking_flag =
-      c10::utils::get_env("CUDA_LAUNCH_BLOCKING");
+      c10::utils::check_env("CUDA_LAUNCH_BLOCKING");
   static bool blocking_enabled =
-      (device_blocking_flag && std::stoi(device_blocking_flag.value()));
+      (device_blocking_flag.has_value() && device_blocking_flag.value());
   if (blocking_enabled) {
     return "";
   } else {
