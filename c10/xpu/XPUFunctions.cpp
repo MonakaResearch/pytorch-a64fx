@@ -31,8 +31,7 @@ struct DevicePool {
   std::unique_ptr<sycl::context> context;
 } gDevicePool;
 
-// Ensures we only call enumDevices only once.
-void enumDevices() {
+void enumDevices(std::vector<std::unique_ptr<sycl::device>>& devices) {
   auto platform_list = sycl::platform::get_platforms();
   // Enumerated GPU devices from the specific platform.
   for (const auto& platform : platform_list) {
@@ -42,7 +41,7 @@ void enumDevices() {
     auto device_list = platform.get_devices();
     for (const auto& device : device_list) {
       if (device.is_gpu()) {
-        gDevicePool.devices.push_back(std::make_unique<sycl::device>(device));
+        devices.push_back(std::make_unique<sycl::device>(device));
       }
     }
   }
@@ -59,7 +58,7 @@ void enumDevices() {
 
 inline void initGlobalDevicePoolState() {
   // Enumerate all GPU devices and record them.
-  enumDevices();
+  enumDevices(gDevicePool.devices);
   if (gDevicePool.devices.empty()) {
     TORCH_WARN("XPU device count is zero!");
     return;
