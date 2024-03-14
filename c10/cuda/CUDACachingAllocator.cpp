@@ -797,6 +797,7 @@ cudaError_t cudaMallocMaybeCapturing(void** p, size_t size) {
 
 static std::string reportProcessMemoryInfo(c10::DeviceIndex device) {
 #ifdef PYTORCH_C10_DRIVER_API_SUPPORTED
+  #ifndef USE_ROCM
   void* nvml_handle = DriverAPI::get_nvml_handle();
   if (!nvml_handle) {
     return "";
@@ -847,6 +848,8 @@ static std::string reportProcessMemoryInfo(c10::DeviceIndex device) {
     ss << " has " << format_size(proc.usedGpuMemory) << " memory in use. ";
   }
   return ss.str();
+  #endif
+  return "";
 #else
   return "";
 #endif
