@@ -193,7 +193,7 @@ jobs:
           USE_SPLIT_BUILD: ${{ inputs.use_split_build }}
         run: |
           # Fetch aws credential from IMDs
-          eval $(python3 .github/scripts/get_aws_session_tokens.py)
+          eval "$(python3 .github/scripts/get_aws_session_tokens.py)"
           # detached container should get cleaned up by teardown_ec2_linux
           container_name=$(docker run \
             -e BUILD_ENVIRONMENT \
