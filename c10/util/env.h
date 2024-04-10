@@ -13,7 +13,7 @@ C10_API void set_env(
     bool overwrite = true);
 
 // Checks an environment variable is set.
-C10_API bool has_env(const char* name);
+C10_API bool has_env(const char* name) noexcept;
 
 // Reads an environment variable and returns
 // - optional<true>,              if set equal to "1"
@@ -26,6 +26,6 @@ C10_API std::optional<bool> check_env(const char* name);
 
 // Reads the value of an environment variable if it is set.
 // However, check_env should be used if the value is assumed to be a flag.
-C10_API std::optional<std::string> get_env(const char* name);
+C10_API std::optional<std::string> get_env(const char* name) noexcept;
 
 } // namespace c10::utils

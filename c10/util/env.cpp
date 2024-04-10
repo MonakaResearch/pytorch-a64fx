@@ -44,7 +44,7 @@ void set_env(const char* name, const char* value, bool overwrite) {
 }
 
 // Checks an environment variable is set.
-bool has_env(const char* name) {
+bool has_env(const char* name) noexcept {
   std::shared_lock lk(env_mutex);
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -59,7 +59,7 @@ bool has_env(const char* name) {
 }
 
 // Reads an environment variable and returns the content if it is set
-std::optional<std::string> get_env(const char* name) {
+std::optional<std::string> get_env(const char* name) noexcept {
   std::shared_lock lk(env_mutex);
 #ifdef _MSC_VER
 #pragma warning(push)

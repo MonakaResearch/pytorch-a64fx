@@ -3,6 +3,7 @@
 
 namespace c10::cuda {
 
+// NOLINTNEXTLINE(bugprone-exception-escape,-warnings-as-errors)
 const char* get_cuda_check_suffix() noexcept {
   static auto device_blocking_flag =
       c10::utils::check_env("CUDA_LAUNCH_BLOCKING");
