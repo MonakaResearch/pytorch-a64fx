@@ -247,7 +247,7 @@ void CUDAAllocatorConfig::parseArgs(const std::optional<std::string>& env) {
   }
   {
     std::lock_guard<std::mutex> lock(m_last_allocator_settings_mutex);
-    m_last_allocator_settings = env;
+    m_last_allocator_settings = env.value();
   }
 
   std::vector<std::string> config;
