@@ -62,6 +62,8 @@ jobs:
 
       - name: Checkout PyTorch
         uses: pytorch/pytorch/.github/actions/checkout-pytorch@main
+        with:
+          no-sudo: ${{ inputs.build_environment == 'linux-s390x-binary-manywheel' }}
 
       - name: Check if in a ARC runner
         shell: bash
@@ -145,12 +147,15 @@ jobs:
           TD_DISTRIBUTED: ${{ steps.keep-going.outputs.ci-td-distributed }}
           SCCACHE_BUCKET: ossci-compiler-cache-circleci-v2
           SCCACHE_S3_KEY_PREFIX: ${{ github.workflow }}
-          SHM_SIZE: ${{ contains(inputs.build-environment, 'cuda') && '2g' || '1g' }}
           DOCKER_IMAGE: ${{ inputs.docker-image }}
           DASHBOARD_TAG: ${{ inputs.dashboard-tag }}
 
         run: |
           set -x
+
+          # since some steps are skipped on s390x, if they are necessary, run them here
+          env | grep '^GITHUB' >> "/tmp/github_env_${GITHUB_RUN_ID}"
+          env | grep '^CI' >> "/tmp/github_env_${GITHUB_RUN_ID}"
 
           if [[ $TEST_CONFIG == 'multigpu' ]]; then
             TEST_COMMAND=.ci/pytorch/multigpu-test.sh
@@ -200,7 +205,6 @@ jobs:
             --security-opt seccomp=unconfined \
             --cap-add=SYS_PTRACE \
             --ipc=host \
-            --shm-size="${SHM_SIZE}" \
             --tty \
             --detach \
             --name="${container_name}" \
@@ -208,8 +212,6 @@ jobs:
             -w /var/lib/jenkins/workspace \
             "${DOCKER_IMAGE}"
           )
-          # Propagate download.pytorch.org IP to container
-          grep download.pytorch.org /etc/hosts | docker exec -i "${container_name}" sudo bash -c "/bin/cat >> /etc/hosts"
           echo "DOCKER_CONTAINER_ID=${container_name}" >> "${GITHUB_ENV}"
           docker exec -t "${container_name}" sh -c "pip install $(echo dist/*.whl)[opt-einsum] && ${TEST_COMMAND}"
 
