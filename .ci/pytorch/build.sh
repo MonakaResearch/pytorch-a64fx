@@ -66,6 +66,12 @@ if [[ "$BUILD_ENVIRONMENT" == *executorch* ]]; then
   export USE_CUDA=0
 fi
 
+if [[ "$BUILD_ENVIRONMENT" == *s390x* ]]; then
+  # make virtual environment for pip
+  virtualenv --system-site-packages $HOME/venv
+  . $HOME/venv/bin/activate
+fi
+
 if ! which conda; then
   # In ROCm CIs, we are doing cross compilation on build machines with
   # intel cpu and later run tests on machines with amd cpu.
