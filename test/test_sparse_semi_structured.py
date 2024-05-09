@@ -267,8 +267,8 @@ class SparseSemiStructuredTensorCompileTest(torch._dynamo.test_case.TestCase):
 class TestSparseSemiStructured(TestCase):
 
     def setUp(self):
-        if not _IS_SM8X:
-            self.skipTest('Only runs on SM80')
+        if not _IS_SM8X and not _IS_MI300x:
+            self.skipTest('Only runs on SM80/MI300x')
         if IS_WINDOWS:
             self.skipTest("torch.compile not supported on windows")
 
