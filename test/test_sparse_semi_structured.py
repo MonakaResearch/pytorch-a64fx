@@ -180,8 +180,8 @@ def rand_sparse_semi_structured_all_patterns(r, c, dtype, device):
 class SparseSemiStructuredTensorCompileTest(torch._dynamo.test_case.TestCase):
 
     def setUp(self):
-        if not _IS_SM8X:
-            self.skipTest('Only runs on SM80')
+        if not _IS_SM8X and not _IS_MI300x:
+            self.skipTest('Only runs on SM80/MI300x')
         super().setUp()
 
     def tearDown(self):
@@ -569,8 +569,8 @@ def create_random_mask(shape) -> torch.Tensor:
 class TestSparseSemiStructuredTraining(TestCase):
 
     def setUp(self):
-        if not _IS_SM8X:
-            self.skipTest('Only runs on SM80')
+        if not _IS_SM8X and not _IS_MI300x:
+            self.skipTest('Only runs on SM80/MI300x')
         if IS_WINDOWS:
             self.skipTest('CUTLASS not supported on windows')
 
