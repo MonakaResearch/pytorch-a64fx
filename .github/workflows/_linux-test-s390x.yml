@@ -205,7 +205,7 @@ jobs:
           )
           echo "DOCKER_CONTAINER_ID=${container_name}" >> "${GITHUB_ENV}"
           docker exec -t "${container_name}" sh -c "virtualenv --system-site-packages $HOME/venv"
-          docker exec -t "${container_name}" sh -c "apt update ; apt install -y gfortran libjpeg-dev python3-cryptography python3-z3 python3-grpcio libxslt-dev libxml2-dev </dev/null"
+          docker exec -t "${container_name}" sh -c "apt update ; apt install -y gfortran libjpeg-dev python3-cryptography python3-grpcio libxslt-dev libxml2-dev </dev/null"
           docker exec -t "${container_name}" sh -c ". $HOME/venv/bin/activate ; pip install -r .ci/docker/requirements-ci.txt"
           docker exec -t "${container_name}" sh -c ". $HOME/venv/bin/activate ; pip install $(echo dist/*.whl)[opt-einsum] && ${TEST_COMMAND}"
 
