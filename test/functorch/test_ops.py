@@ -52,6 +52,7 @@ from torch.testing._internal.common_utils import (
     run_tests,
     runOnRocm,
     skipIfRocm,
+    skipIfS390X,
     TEST_WITH_ASAN,
     TEST_WITH_ROCM,
     TestCase,
@@ -1020,6 +1021,7 @@ class TestOperators(TestCase):
                 xfail("_native_batch_norm_legit"),
                 # TODO: implement batching rule
                 xfail("_batch_norm_with_update"),
+                decorate("linalg.tensorsolve", decorator=skipIfS390X),
             }
         ),
     )

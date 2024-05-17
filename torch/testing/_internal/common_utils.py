@@ -1572,6 +1572,21 @@ def runOnRocm(fn):
             raise unittest.SkipTest("test currently only works on the ROCm stack")
     return wrapper
 
+def skipIfS390X(func=None, *, msg="test doesn't currently work on the s390x stack"):
+    def dec_fn(fn):
+        reason = f"skipIfS390X: {msg}"
+
+        @wraps(fn)
+        def wrapper(*args, **kwargs):
+            if platform.machine() == "s390x":  # noqa: F821
+                raise unittest.SkipTest(reason)
+            else:
+                return fn(*args, **kwargs)
+        return wrapper
+    if func:
+        return dec_fn(func)
+    return dec_fn
+
 def skipIfXpu(func=None, *, msg="test doesn't currently work on the XPU stack"):
     def dec_fn(fn):
         reason = f"skipIfXpu: {msg}"
