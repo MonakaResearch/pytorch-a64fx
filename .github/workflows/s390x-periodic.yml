@@ -64,3 +64,4 @@ jobs:
       docker-image: pytorch/manylinuxs390x-builder:cpu-s390x-main
       test-matrix: ${{ needs.linux-ubuntu-24_04-py3-cpu-s390x-build.outputs.test-matrix }}
       use-gha: true
+      timeout-minutes: 480
