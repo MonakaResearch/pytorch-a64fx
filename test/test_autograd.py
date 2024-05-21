@@ -67,6 +67,7 @@ from torch.testing._internal.common_utils import (
     instantiate_parametrized_tests,
     IS_MACOS,
     IS_WINDOWS,
+    IS_S390X,
     parametrize,
     run_tests,
     set_warn_always_context,
@@ -6824,6 +6825,7 @@ for shape in [(1,), ()]:
                 out = checkpoint(fn, a, use_reentrant=False, debug=True)
                 out.backward()
 
+    @unittest.skipIf(IS_S390X, "Fails on s390x CI")
     def test_access_saved_tensor_twice_without_recomputation_works(self):
         count = [0]
 

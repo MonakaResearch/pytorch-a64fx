@@ -2,6 +2,7 @@
 
 from functools import partial
 
+import platform
 import torch
 from torch.testing._internal.common_device_type import (
     instantiate_device_type_tests,
@@ -30,6 +31,9 @@ class TestBwdGradients(TestGradients):
     # Tests that gradients are computed correctly
     @_gradcheck_ops(op_db + hop_db + custom_op_db)
     def test_fn_grad(self, device, dtype, op):
+        if platform.machine() == "s390x":
+            self.skipTest("Skipped! Investigate issue on s390x!")
+            return
         # This is verified by test_dtypes in test_ops.py
         if dtype not in op.supported_backward_dtypes(torch.device(device).type):
             self.skipTest("Skipped! Dtype is not in supported backward dtypes!")

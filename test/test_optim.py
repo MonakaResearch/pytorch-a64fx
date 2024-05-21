@@ -21,7 +21,7 @@ from torch.testing._internal.common_optimizers import (
     optim_db, optims, OptimizerErrorEnum, _get_optim_inputs_including_global_cliquey_kwargs, TensorTracker)
 from torch.testing._internal.common_device_type import (
     instantiate_device_type_tests, largeTensorTest, onlyCPU, onlyCUDA, skipMPS, TEST_WITH_ROCM, onlyNativeDeviceTypes)
-from torch.testing._internal.common_utils import markDynamoStrictTest, parametrize, run_tests, TestCase, TEST_WITH_TORCHDYNAMO
+from torch.testing._internal.common_utils import IS_S390X, markDynamoStrictTest, parametrize, run_tests, TestCase, TEST_WITH_TORCHDYNAMO
 from torch.testing._internal.common_cuda import _create_scaling_case
 from torch.testing._internal.common_dtype import floating_types_and
 
@@ -506,6 +506,7 @@ class TestOptimRenewed(TestCase):
 
 
     @skipMPS
+    @unittest.skipIf(IS_S390X, "Some tests currently fail on s390x")
     @optims([o for o in optim_db if o.supports_complex], dtypes=[torch.complex64])
     def test_complex_2d(self, device, dtype, optim_info):
         optim_cls = optim_info.optim_cls

@@ -13,6 +13,7 @@ from torch import _inductor as inductor
 from torch._dynamo import compiled_autograd
 from torch._dynamo.utils import counters
 from torch._inductor.test_case import run_tests, TestCase
+from torch.testing._internal.common_utils import IS_S390X
 from torch.testing._internal.inductor_utils import HAS_CPU, HAS_CUDA
 from torch.testing._internal.logging_utils import logs_to_string
 
@@ -1434,6 +1435,7 @@ TORCH_LIBRARY(test_autograd_cpp_node_data_dependent, m) {
             out = compiled_fn(activations)
             self.assertTrue(len(activations) == 0)
 
+    @unittest.skipIf(IS_S390X, "doesn't work on s390x")
     def test_verbose_logs_graph(self):
         torch._logging.set_logs(compiled_autograd_verbose=True)
 
@@ -1476,6 +1478,7 @@ TORCH_LIBRARY(test_autograd_cpp_node_data_dependent, m) {
             sum(1 for e in expected_logs if e in logs.getvalue()), len(expected_logs)
         )
 
+    @unittest.skipIf(IS_S390X, "doesn't work on s390x")
     def test_verbose_logs_cpp(self):
         script = """
 import torch

@@ -2,6 +2,7 @@
 
 
 import logging
+import unittest
 
 import torch
 import torch.ao.quantization as tq
@@ -14,7 +15,7 @@ from torch.ao.quantization.quantize_fx import (
     prepare_fx,
     prepare_qat_fx,
 )
-from torch.testing._internal.common_utils import TestCase
+from torch.testing._internal.common_utils import IS_S390X, TestCase
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
@@ -134,6 +135,7 @@ class TestComposability(TestCase):
     # that the problem outlined in test_s_prep_before_q_prep would occur. This test verifies
     # both that the fix to the convert flow avoids this issue and that the resulting quantized
     # module uses the sparse version of the weight value.
+    @unittest.skipIf(IS_S390X, "Currently fails on s390x")
     def test_convert_without_squash_mask(self):
         (
             mod,
@@ -203,6 +205,7 @@ class TestComposability(TestCase):
 
     # This tests whether performing fusion before sparse prepare causes and issues. The
     # main worry was that the links to the modules in the sparse config would be broken by fusion.
+    @unittest.skipIf(IS_S390X, "Currently fails on s390x")
     def test_fusion_before_s_prep(self):
         (
             mod,

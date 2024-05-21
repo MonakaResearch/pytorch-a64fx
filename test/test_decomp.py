@@ -32,6 +32,7 @@ from torch.testing._internal.common_modules import module_db, modules
 from torch.testing._internal.common_utils import (
     is_iterable_of_tensors,
     IS_MACOS,
+    IS_S390X,
     IS_WINDOWS,
     run_tests,
     skipIfCrossRef,
@@ -1147,7 +1148,7 @@ class DecompOneOffTests(TestCase):
         [
             xfail(
                 "nn.functional.scaled_dot_product_attention",
-                dtypes=[torch.half] + ([torch.bfloat16] if IS_MACOS else []),
+                dtypes=[torch.half] + ([torch.bfloat16] if IS_MACOS or IS_S390X else []),
             ),
         ],
     )

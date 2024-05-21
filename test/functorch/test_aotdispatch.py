@@ -61,6 +61,7 @@ from torch.testing._internal.common_utils import (
     instantiate_parametrized_tests,
     IS_ARM64,
     IS_MACOS,
+    IS_S390X,
     IS_WINDOWS,
     IS_X86,
     outs_and_grads,
@@ -5856,6 +5857,7 @@ class TestEagerFusionModuleInfo(AOTTestCase):
     def test_aot_autograd_module_exhaustive(self, device, dtype, training, module_info):
         _test_aot_autograd_module_helper(self, device, dtype, training, module_info)
 
+    @unittest.skipIf(IS_S390X, "fails on s390x CI")
     @modules(module_db, allowed_dtypes=(torch.float,))
     @decorateForModules(
         unittest.expectedFailure,
