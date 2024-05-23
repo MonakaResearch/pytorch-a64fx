@@ -43,11 +43,16 @@ jobs:
       runner: linux.s390x
       test-matrix: |
         { include: [
-          { config: "default", shard: 1, num_shards: 5, runner: "linux.s390x" },
-          { config: "default", shard: 2, num_shards: 5, runner: "linux.s390x" },
-          { config: "default", shard: 3, num_shards: 5, runner: "linux.s390x" },
-          { config: "default", shard: 4, num_shards: 5, runner: "linux.s390x" },
-          { config: "default", shard: 5, num_shards: 5, runner: "linux.s390x" },
+          { config: "default", shard: 1,  num_shards: 10, runner: "linux.s390x" },
+          { config: "default", shard: 2,  num_shards: 10, runner: "linux.s390x" },
+          { config: "default", shard: 3,  num_shards: 10, runner: "linux.s390x" },
+          { config: "default", shard: 4,  num_shards: 10, runner: "linux.s390x" },
+          { config: "default", shard: 5,  num_shards: 10, runner: "linux.s390x" },
+          { config: "default", shard: 6,  num_shards: 10, runner: "linux.s390x" },
+          { config: "default", shard: 7,  num_shards: 10, runner: "linux.s390x" },
+          { config: "default", shard: 8,  num_shards: 10, runner: "linux.s390x" },
+          { config: "default", shard: 9,  num_shards: 10, runner: "linux.s390x" },
+          { config: "default", shard: 10, num_shards: 10, runner: "linux.s390x" },
         ]}
 
   linux-ubuntu-24_04-py3-cpu-s390x-test:
