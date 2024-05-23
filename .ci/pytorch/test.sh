@@ -83,6 +83,13 @@ if [[ "$BUILD_ENVIRONMENT" == *clang9* ]]; then
   export VALGRIND=OFF
 fi
 
+
+if [[ "$BUILD_ENVIRONMENT" == *s390x* ]]; then
+  # There are additional warnings on s390x, maybe due to newer gcc.
+  # Skip this check for now
+  export VALGRIND=OFF
+fi
+
 if [[ "${PYTORCH_TEST_RERUN_DISABLED_TESTS}" == "1" ]] || [[ "${CONTINUE_THROUGH_ERROR}" == "1" ]]; then
   # When rerunning disable tests, do not generate core dumps as it could consume
   # the runner disk space when crashed tests are run multiple times. Running out

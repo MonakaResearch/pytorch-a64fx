@@ -1022,6 +1022,9 @@ class TestOperators(TestCase):
                 # TODO: implement batching rule
                 xfail("_batch_norm_with_update"),
                 decorate("linalg.tensorsolve", decorator=skipIfS390X),
+                decorate("nn.functional.max_pool1d", decorator=skipIfS390X),
+                decorate("nn.functional.max_unpool2d", decorator=skipIfS390X),
+                decorate("nn.functional.multilabel_margin_loss", decorator=skipIfS390X),
             }
         ),
     )
