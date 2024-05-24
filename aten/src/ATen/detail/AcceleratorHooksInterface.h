@@ -41,7 +41,7 @@ struct TORCH_API AcceleratorHooksInterface {
     return -1;
   }
 
-  virtual bool isPinnedPtr(const void* /*data*/) const {
+  virtual bool isPinnedPtr(const void* data) const {
     return false;
   }
 
