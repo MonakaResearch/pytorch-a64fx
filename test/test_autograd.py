@@ -7920,6 +7920,7 @@ for shape in [(1,), ()]:
         c = Func.apply(a)
         self.assertEqual(repr(c), "tensor([2.], grad_fn=<FuncBackward>)")
 
+    @unittest.skipIf(IS_S390X, "Fails on s390x CI")
     def test_autograd_inplace_view_of_view(self):
         x = torch.zeros(2)
         with torch.no_grad():

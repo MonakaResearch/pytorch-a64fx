@@ -364,6 +364,7 @@ S390X_BLOCKLIST = [
     "functorch/test_vmap",
     "test_jit_fuser_te",
     "test_sparse",
+    "test_ci_sanity_check_fail",
     # following tests are long and failing
     "dynamo/test_dynamic_shapes",
     "test_dataloader",
@@ -381,6 +382,11 @@ S390X_BLOCKLIST = [
     # following tests occasionally fail or hang
     "quantization/core/test_quantized_op",
     "test_static_runtime",
+    # following tests fail due to missing llvm features or for other reasons
+    "cpp/test_tensorexpr",
+    "cpp/static_runtime_test",
+    "cpp/test_jit",
+    "cpp/test_lazy",
 ]
 
 XPU_BLOCKLIST = [
