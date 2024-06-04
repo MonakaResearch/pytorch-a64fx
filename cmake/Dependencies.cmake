@@ -15,24 +15,6 @@ set(CMAKE_INSTALL_RPATH "${_rpath_portable_origin}")
 # the rpath (per library?)
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
- # UBSAN triggers when compiling protobuf, so we need to disable it.
-set(UBSAN_FLAG "-fsanitize=undefined")
-
-macro(disable_ubsan)
-  if(CMAKE_C_FLAGS MATCHES ${UBSAN_FLAG} OR CMAKE_CXX_FLAGS MATCHES ${UBSAN_FLAG})
-    set(CAFFE2_UBSAN_ENABLED ON)
-    string(REPLACE ${UBSAN_FLAG} "" CMAKE_C_FLAGS ${CMAKE_C_FLAGS})
-    string(REPLACE ${UBSAN_FLAG} "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
-  endif()
-endmacro()
-
-macro(enable_ubsan)
-  if(CAFFE2_UBSAN_ENABLED)
-    set(CMAKE_C_FLAGS "${UBSAN_FLAG} ${CMAKE_C_FLAGS}")
-    set(CMAKE_CXX_FLAGS "${UBSAN_FLAG} ${CMAKE_CXX_FLAGS}")
-  endif()
-endmacro()
-
 # ---[ CUDA
 if(USE_CUDA)
   # public/*.cmake uses CAFFE2_USE_*
@@ -95,13 +77,6 @@ if(USE_XPU)
   endif()
 endif()
 
-# ---[ Custom Protobuf
-if(CAFFE2_CMAKE_BUILDING_WITH_MAIN_REPO AND NOT INTERN_BUILD_MOBILE)
-  disable_ubsan()
-  include(${CMAKE_CURRENT_LIST_DIR}/ProtoBuf.cmake)
-  enable_ubsan()
-endif()
-
 if(USE_ASAN OR USE_TSAN)
   find_package(Sanitizer REQUIRED)
   if(USE_ASAN)
@@ -132,13 +107,6 @@ if(TARGET Threads::Threads)
 else()
   message(FATAL_ERROR
       "Cannot find threading library. PyTorch requires Threads to compile.")
-endif()
-
-# ---[ protobuf
-if(CAFFE2_CMAKE_BUILDING_WITH_MAIN_REPO)
-  if(USE_LITE_PROTO)
-    set(CAFFE2_USE_LITE_PROTO 1)
-  endif()
 endif()
 
 # ---[ BLAS
@@ -1265,19 +1233,9 @@ endif()
 
 # ---[ Onnx
 if(CAFFE2_CMAKE_BUILDING_WITH_MAIN_REPO AND NOT INTERN_DISABLE_ONNX)
-  if(EXISTS "${CAFFE2_CUSTOM_PROTOC_EXECUTABLE}")
-    set(ONNX_CUSTOM_PROTOC_EXECUTABLE ${CAFFE2_CUSTOM_PROTOC_EXECUTABLE})
-  endif()
   set(TEMP_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
   set(BUILD_SHARED_LIBS OFF)
   set(ONNX_USE_MSVC_STATIC_RUNTIME ${CAFFE2_USE_MSVC_STATIC_RUNTIME})
-  set(ONNX_USE_LITE_PROTO ${CAFFE2_USE_LITE_PROTO})
-  # If linking local protobuf, make sure ONNX has the same protobuf
-  # patches as Caffe2 and Caffe proto. This forces some functions to
-  # not be inline and instead route back to the statically-linked protobuf.
-  if(CAFFE2_LINK_LOCAL_PROTOBUF)
-    set(ONNX_PROTO_POST_BUILD_SCRIPT ${PROJECT_SOURCE_DIR}/cmake/ProtoBufPatch.cmake)
-  endif()
   if(ONNX_ML)
     add_definitions(-DONNX_ML=1)
   endif()
@@ -1301,10 +1259,6 @@ if(CAFFE2_CMAKE_BUILDING_WITH_MAIN_REPO AND NOT INTERN_DISABLE_ONNX)
       caffe2_interface_library(onnx onnx_library)
     endif()
     list(APPEND Caffe2_DEPENDENCY_WHOLE_LINK_LIBS onnx_library)
-    # TODO: Delete this line once https://github.com/pytorch/pytorch/pull/55889 lands
-    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-      target_compile_options(onnx PRIVATE -Wno-deprecated-declarations)
-    endif()
   else()
     add_library(onnx SHARED IMPORTED)
     find_library(ONNX_LIBRARY onnx)
