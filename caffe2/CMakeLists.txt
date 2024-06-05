@@ -1376,6 +1376,13 @@ if(USE_DISTRIBUTED)
   endif()
 endif()
 
+if(TARGET onnx_proto)
+  target_link_libraries(torch_cpu PRIVATE onnx_proto)
+endif()
+if(TARGET onnx)
+  target_link_libraries(torch_cpu PRIVATE onnx)
+endif()
+
 if($ENV{TH_BINARY_BUILD})
   if(NOT MSVC AND USE_CUDA AND NOT APPLE)
     # Note [Extra MKL symbols for MAGMA in torch_cpu]
