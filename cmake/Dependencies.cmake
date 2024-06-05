@@ -520,6 +520,15 @@ if(USE_XNNPACK AND NOT USE_SYSTEM_XNNPACK)
     set(__caffe2_CMAKE_POSITION_INDEPENDENT_CODE_FLAG ${CMAKE_POSITION_INDEPENDENT_CODE})
     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+    # Update xnnpack memory target name.
+    # Otherwise, there is a CMake target conflict with ONNX.
+    if(NOT EXISTS "${XNNPACK_SOURCE_DIR}/CMakeLists.txt.tag")
+      file(READ "${XNNPACK_SOURCE_DIR}/CMakeLists.txt" FILE_CONTENTS)
+      string(REPLACE "memory " "xnnpack_memory " FILE_CONTENTS "${FILE_CONTENTS}")
+      file(WRITE "${XNNPACK_SOURCE_DIR}/CMakeLists.txt" "${FILE_CONTENTS}")
+      file(WRITE "${XNNPACK_SOURCE_DIR}/CMakeLists.txt.tag" "xnnpack_memory")
+    endif()
+
     add_subdirectory(
       "${XNNPACK_SOURCE_DIR}"
       "${CONFU_DEPENDENCIES_BINARY_DIR}/XNNPACK")
@@ -1241,7 +1250,9 @@ if(CAFFE2_CMAKE_BUILDING_WITH_MAIN_REPO AND NOT INTERN_DISABLE_ONNX)
   endif()
   add_definitions(-DONNXIFI_ENABLE_EXT=1)
   if(NOT USE_SYSTEM_ONNX)
-    add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/../third_party/onnx EXCLUDE_FROM_ALL)
+    set(THIRD_PARTY_ONNX_DIR "${CMAKE_CURRENT_LIST_DIR}/../third_party/onnx")
+
+    add_subdirectory("${THIRD_PARTY_ONNX_DIR}" EXCLUDE_FROM_ALL)
     if(NOT MSVC)
       set_target_properties(onnx_proto PROPERTIES CXX_STANDARD 17)
     endif()
