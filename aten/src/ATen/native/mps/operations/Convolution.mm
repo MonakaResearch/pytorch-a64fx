@@ -159,7 +159,7 @@ static Tensor _mps_convolution_impl(const Tensor& input_t_,
                 c10::nullopt,
                 kMPS,
                 c10::nullopt,
-                memory_format);
+                is_macOS_15_0_or_newer ? memory_format : MemoryFormat::Contiguous);
   if (output_t.numel() == 0) {
     return output_t;
   }

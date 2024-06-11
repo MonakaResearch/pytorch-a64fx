@@ -122,7 +122,7 @@ bool MPSDevice::isMacOS13Plus(MacOSVersion version) const {
   static bool _macos_13_3_plus = [compileOptions respondsToSelector:@selector(maxTotalThreadsPerThreadgroup)] == YES;
 
   static bool _macos_14_0_plus = [mpsCD instancesRespondToSelector:@selector(conjugateWithTensor:name:)] == YES;
-  static bool _macos_15_0_plus = [mpsCD respondsToSelector:@selector(variableFromTensorWithTensor:name:)] == YES;
+  static bool _macos_15_0_plus = [mpsCD instancesRespondToSelector:@selector(variableFromTensorWithTensor:name:)] == YES;
 
   switch (version) {
     case MacOSVersion::MACOS_VER_13_0_PLUS:
