@@ -23,7 +23,9 @@
 #endif // CAFFE2_LOG_THRESHOLD
 
 // If glog is used somewhere
-#ifndef LOG
+#if defined(FBCODE_CAFFE2)
+#include <c10/util/logging_is_google_glog.h>
+#else
 #include <c10/util/logging_is_not_google_glog.h>
 #endif
 
@@ -108,7 +110,11 @@ C10_API void UpdateLoggingLevelsFromFlags();
 }
 
 constexpr bool IsUsingGoogleLogging() {
+#if defined(FBCODE_CAFFE2)
+  return true;
+#else
   return false;
+#endif
 }
 
 /**
