@@ -10,4 +10,9 @@ if(USE_PTHREADPOOL AND NOT USE_INTERNAL_PTHREADPOOL_IMPL)
   )
 endif()
 
+if(NOT INTERN_BUILD_MOBILE)
+  list(APPEND Caffe2_CPU_SRCS
+    utils/proto_wrap.cc
+  )
+endif()
 set(Caffe2_CPU_SRCS ${Caffe2_CPU_SRCS} PARENT_SCOPE)
