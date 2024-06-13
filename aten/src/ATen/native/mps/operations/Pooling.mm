@@ -193,7 +193,7 @@ static void pool2d_template(const Tensor& input,
     MPSStream* mpsStream = getCurrentMPSStream();
     // in case of ChannelsLast we don't perform gather() in placeholder to avoid implicit conversion to NCHW
 
-    // MPS TODO: Using strided API causes invalid indices to be generated if they original format is NHWC
+    // MPS TODO: Using strided API causes invalid indices to be generated if the original format is NHWC
     //           Output is still correct, but indices are not matching. Disable it for now and use the old
     //           gather path to solve the strides.
     Placeholder inputPlaceholder = Placeholder(cachedGraph->inputTensor,
