@@ -677,6 +677,7 @@ TORCH_IMPL_FUNC(gelu_out_mps)(const Tensor& self, c10::string_view approximate, 
   MPSStream* stream = getCurrentMPSStream();
 
   bool executeGatherOp = needsGather(output);
+  Tensor output_;
   if (executeGatherOp) {
     output_ = at::empty_like(output);
   }
