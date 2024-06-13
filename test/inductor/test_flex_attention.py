@@ -1243,7 +1243,7 @@ class GraphModule(torch.nn.Module):
         out: "f64[2, 2, 8, 4]" = flex_attention[0];  flex_attention = None
         return (out,)
 
-    class GraphModule(torch.nn.Module):
+    class flex_attention_0(torch.nn.Module):
         def forward(self, new_empty: "f64[]", new_empty_1: "i32[]", new_empty_2: "i32[]", new_empty_3: "i32[]", new_empty_4: "i32[]"):
             mul: "f64[]" = new_empty * new_empty;  new_empty = None
             return mul
@@ -1279,12 +1279,12 @@ class GraphModule(torch.nn.Module):
         getitem_4: "f64[2, 2, 8, 4]" = flex_attention_backward[2];  flex_attention_backward = None
         return [getitem_2, getitem_3, getitem_4]
 
-    class <lambda>(torch.nn.Module):
+    class fw_graph(torch.nn.Module):
         def forward(self, arg0_1: "f64[]", arg1_1: "i32[]", arg2_1: "i32[]", arg3_1: "i32[]", arg4_1: "i32[]"):
             mul: "f64[]" = torch.ops.aten.mul.Tensor(arg0_1, arg0_1);  arg0_1 = None
             return mul
 
-    class <lambda>(torch.nn.Module):
+    class joint_graph(torch.nn.Module):
         def forward(self, arg0_1: "f64[]", arg1_1: "i32[]", arg2_1: "i32[]", arg3_1: "i32[]", arg4_1: "i32[]", arg5_1: "f64[]"):
             mul: "f64[]" = torch.ops.aten.mul.Tensor(arg0_1, arg0_1)
             mul_1: "f64[]" = torch.ops.aten.mul.Tensor(arg5_1, arg0_1)
