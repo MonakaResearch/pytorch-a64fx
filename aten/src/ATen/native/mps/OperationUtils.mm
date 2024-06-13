@@ -388,7 +388,7 @@ static std::vector<int64_t> inversePermutation(std::vector<int64_t> permuteOrder
   return inversePerm;
 }
 
-static MPSNDArray* permuteNDArray(MPSNDArray* inArray, std::vector<int64_t> permuteOrder_) {
+static MPSNDArray* permuteNDArray(MPSNDArray* inArray, const std::vector<int64_t>& permuteOrder_) {
   auto permuteOrder = inversePermutation(permuteOrder_);
   NSUInteger srcRank = [inArray numberOfDimensions];
   if (srcRank != permuteOrder.size()) {
