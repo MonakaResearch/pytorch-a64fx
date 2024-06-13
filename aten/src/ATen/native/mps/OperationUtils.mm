@@ -378,7 +378,7 @@ static std::vector<int64_t> getSortedStrides(const IntArrayRef& s) {
   return idx;
 }
 
-static std::vector<int64_t> inversePermutation(std::vector<int64_t> permuteOrder) {
+static std::vector<int64_t> inversePermutation(const std::vector<int64_t>& permuteOrder) {
   auto size = permuteOrder.size();
   std::vector<int64_t> inversePerm(permuteOrder.size());
 
