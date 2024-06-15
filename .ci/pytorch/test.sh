@@ -368,7 +368,7 @@ test_inductor_cpp_wrapper_abi_compatible() {
 
   echo "Testing Inductor cpp wrapper mode with TORCHINDUCTOR_ABI_COMPATIBLE=1"
   # cpu stack allocation causes segfault and needs more investigation
-  python test/run_test.py --include inductor/test_cpu_cpp_wrapper
+  PYTORCH_TESTING_DEVICE_ONLY_FOR="" python test/run_test.py --include inductor/test_cpu_cpp_wrapper
   python test/run_test.py --include inductor/test_cuda_cpp_wrapper
 
   TORCHINDUCTOR_CPP_WRAPPER=1 python benchmarks/dynamo/timm_models.py --device cuda --accuracy --amp \
@@ -550,6 +550,11 @@ test_inductor_micro_benchmark() {
   python benchmarks/gpt_fast/benchmark.py --output "${TEST_REPORTS_DIR}/gpt_fast_benchmark.csv"
 }
 
+test_inductor_halide() {
+  python test/run_test.py --include inductor/test_halide.py --verbose
+  assert_git_not_dirty
+}
+
 test_dynamo_benchmark() {
   # Usage: test_dynamo_benchmark huggingface 0
   TEST_REPORTS_DIR=$(pwd)/test/test-reports
@@ -565,7 +570,11 @@ test_dynamo_benchmark() {
     test_single_dynamo_benchmark "dashboard" "$suite" "$shard_id" "$@"
   else
     if [[ "${TEST_CONFIG}" == *cpu_inductor* ]]; then
-      test_single_dynamo_benchmark "inference" "$suite" "$shard_id" --inference --float32 "$@"
+      if [[ "${TEST_CONFIG}" == *freezing* ]]; then
+        test_single_dynamo_benchmark "inference" "$suite" "$shard_id" --inference --float32 --freezing "$@"
+      else
+        test_single_dynamo_benchmark "inference" "$suite" "$shard_id" --inference --float32 "$@"
+      fi
     elif [[ "${TEST_CONFIG}" == *aot_inductor* ]]; then
       test_single_dynamo_benchmark "inference" "$suite" "$shard_id" --inference --bfloat16 "$@"
     else
@@ -1233,11 +1242,10 @@ elif [[ "$TEST_CONFIG" == distributed ]]; then
   if [[ "${SHARD_NUMBER}" == 1 ]]; then
     test_rpc
   fi
-elif [[ "$TEST_CONFIG" == deploy ]]; then
-  checkout_install_torchdeploy
-  test_torch_deploy
 elif [[ "${TEST_CONFIG}" == *inductor_distributed* ]]; then
   test_inductor_distributed
+elif [[ "${TEST_CONFIG}" == *inductor-halide* ]]; then
+  test_inductor_halide
 elif [[ "${TEST_CONFIG}" == *inductor-micro-benchmark* ]]; then
   test_inductor_micro_benchmark
 elif [[ "${TEST_CONFIG}" == *huggingface* ]]; then

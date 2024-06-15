@@ -81,7 +81,7 @@ from torch.utils._mode_utils import no_dispatch
 from torch.utils._python_dispatch import TorchDispatchMode
 from torch.utils.checkpoint import checkpoint, checkpoint_sequential
 from torch.utils.cpp_extension import load_inline
-from torch.utils.hooks import RemovableHandle
+from torch.utils.hooks import RemovableHandle  # noqa: TCH001
 
 
 def graph_desc(fn):
@@ -154,7 +154,7 @@ class TestAutograd(TestCase):
 
     def test_grad_mode_class_decoration(self):
         # Decorating class is deprecated and should not be used
-        with self.assertWarnsRegex(UserWarning, "Decorating classes is deprecated"):
+        with self.assertWarnsRegex(FutureWarning, "Decorating classes is deprecated"):
 
             @torch.no_grad()
             class Foo:
@@ -1341,6 +1341,23 @@ class TestAutograd(TestCase):
         a.register_hook(tensor_prehook)
 
         b.backward()
+
+    def test_accumulate_grad_posthooks_should_not_execute(self):
+        def tensor_prehook(g):
+            raise RuntimeError
+
+        def posthook(gO, gI):
+            raise RuntimeError
+
+        a = torch.tensor(1.0, requires_grad=True)
+        a.register_hook(tensor_prehook)
+        b = torch.tensor(1.0, requires_grad=True)
+        c = a.clone()
+        acc = c.grad_fn.next_functions[0][0]
+        acc.register_hook(posthook)
+
+        out = a + b + c
+        out.sum().backward(inputs=[b])
 
     def test_hook_edge_case_when_called_with_grad(self):
         # grad executes the tensor hooks of the next node but not
@@ -5937,13 +5954,13 @@ Done""",
         b = torch.rand(2, 2, requires_grad=True, dtype=torch.float64)
 
         with self.assertWarnsRegex(
-            UserWarning, "get_numerical_jacobian was part of PyTorch's private API"
+            FutureWarning, "`get_numerical_jacobian` was part of PyTorch's private API"
         ):
             jacobian = get_numerical_jacobian(fn, (a, b), target=a, eps=1e-6)
         self.assertEqual(jacobian[0], 2 * torch.eye(4, dtype=torch.double))
 
         with self.assertWarnsRegex(
-            UserWarning, "get_numerical_jacobian was part of PyTorch's private API"
+            FutureWarning, "`get_numerical_jacobian` was part of PyTorch's private API"
         ):
             jacobian = get_numerical_jacobian(fn, (a, b), eps=1e-6)
         self.assertEqual(jacobian[0], 2 * torch.eye(4, dtype=torch.double))
@@ -5963,7 +5980,7 @@ Done""",
 
         outputs = fn(a, b)
         with self.assertWarnsRegex(
-            UserWarning, "get_analytical_jacobian was part of PyTorch's private API"
+            FutureWarning, "`get_analytical_jacobian` was part of PyTorch's private API"
         ):
             (
                 jacobians,
@@ -5991,7 +6008,7 @@ Done""",
 
         outputs = NonDetFunc.apply(a, 1e-6)
         with self.assertWarnsRegex(
-            UserWarning, "get_analytical_jacobian was part of PyTorch's private API"
+            FutureWarning, "`get_analytical_jacobian` was part of PyTorch's private API"
         ):
             (
                 jacobians,
@@ -9318,6 +9335,34 @@ for shape in [(1,), ()]:
             out = Func.apply(a)
         out.backward()
 
+    def test_unpack_hooks_exec_count(self):
+        def f(x, y):
+            return x * y
+
+        pack_count = 0
+        unpack_count = 0
+
+        def pack_hook(x):
+            nonlocal pack_count
+            pack_count += 1
+            return x
+
+        # unpack hook shouldn't run during compilation, while we trace the forward
+        def unpack_hook(x):
+            nonlocal unpack_count
+            unpack_count += 1
+            return x
+
+        x = torch.ones(4, requires_grad=True)
+        y = torch.ones(4, requires_grad=False)
+        with torch.autograd.graph.saved_tensors_hooks(pack_hook, unpack_hook):
+            out_test = f(x, y)
+            self.assertEqual(pack_count, 1)
+            self.assertEqual(unpack_count, 0)
+            out_test.sum().backward()
+            self.assertEqual(pack_count, 1)
+            self.assertEqual(unpack_count, 1)
+
     def test_save_on_cpu_and_checkpoint(self):
         a = torch.randn(2, 2, requires_grad=True)
 
@@ -9507,6 +9552,13 @@ for shape in [(1,), ()]:
             y = f(a)
             memory_with_hooks = torch.cuda.memory_allocated()
             self.assertEqual(memory_with_hooks, memory_without_grad)
+
+    @unittest.skipIf(not TEST_CUDA, "test requires CUDA")
+    def test_scalar_grad_mixed_device(self):
+        x = torch.tensor(1.0, requires_grad=True)
+        y = torch.randn(2, 2, device="cuda")
+        out = x * y
+        out.sum().backward()
 
     def test_multi_grad_all_hooks(self):
         t1 = torch.rand(2, requires_grad=True)
