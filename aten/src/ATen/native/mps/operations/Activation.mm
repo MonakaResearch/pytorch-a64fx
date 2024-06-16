@@ -698,7 +698,7 @@ TORCH_IMPL_FUNC(gelu_out_mps)(const Tensor& self, c10::string_view approximate, 
       newCachedGraph->outputTensor_ = outputTensor;
     });
 
-    Placeholder selfPlaceholder = Placeholder(cachedGraph->inputTensor_, self, nil, executeGatherOp);
+    Placeholder selfPlaceholder = Placeholder(cachedGraph->inputTensor_, self);
     Placeholder outputPlaceholder =
         Placeholder(cachedGraph->outputTensor_, executeGatherOp ? output_ : output, nil, false);
 
@@ -799,7 +799,8 @@ TORCH_IMPL_FUNC(gelu_backward_out_mps)
 
     Placeholder gradPlaceholder = Placeholder(cachedGraph->gradOutputTensor_, grad);
     Placeholder selfPlaceholder = Placeholder(cachedGraph->inputTensor_, self);
-    Placeholder outputPlaceholder = Placeholder(cachedGraph->gradInputTensor_, executeGatherOp ? grad_input_ : grad_input);
+    Placeholder outputPlaceholder =
+        Placeholder(cachedGraph->gradInputTensor_, executeGatherOp ? grad_input_ : grad_input);
 
     auto feeds = dictionaryFromPlaceholders(gradPlaceholder, selfPlaceholder);
     runMPSGraph(stream, cachedGraph->graph(), feeds, outputPlaceholder);
