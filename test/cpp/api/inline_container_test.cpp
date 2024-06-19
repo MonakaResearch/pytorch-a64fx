@@ -5,11 +5,11 @@
 
 #include <gtest/gtest.h>
 
-#include "caffe2/serialize/inline_container.h"
+#include <torch/torch.h>
 #include <c10/util/Logging.h>
 #include "c10/util/irange.h"
 
-namespace caffe2 {
+namespace  torch {
 namespace serialize {
 namespace {
 

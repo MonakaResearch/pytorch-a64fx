@@ -4,7 +4,7 @@
 #include <torch/utils.h>
 
 #include <c10/util/Exception.h>
-#include <caffe2/serialize/read_adapter_interface.h>
+#include <torch/serialize/read_adapter_interface.h>
 #include <torch/csrc/jit/api/module.h>
 #include <torch/csrc/jit/serialization/import.h>
 

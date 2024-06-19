@@ -1,11 +1,11 @@
-#include "caffe2/serialize/file_adapter.h"
+#include <torch/serialize/file_adapter.h>
 #include <c10/util/Exception.h>
 #include <cerrno>
 #include <cstdio>
 #include <string>
 #include "caffe2/core/common.h"
 
-namespace caffe2 {
+namespace torch {
 namespace serialize {
 
 FileAdapter::RAIIFile::RAIIFile(const std::string& file_name) {

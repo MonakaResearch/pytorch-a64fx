@@ -1,7 +1,7 @@
-#include "caffe2/serialize/istream_adapter.h"
+#include <torch/serialize/istream_adapter.h>
 #include <c10/util/Exception.h>
 
-namespace caffe2 {
+namespace torch {
 namespace serialize {
 
 IStreamAdapter::IStreamAdapter(std::istream* istream) : istream_(istream) {}

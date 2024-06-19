@@ -3,9 +3,9 @@
 #include <istream>
 
 #include "c10/macros/Macros.h"
-#include "caffe2/serialize/read_adapter_interface.h"
+#include <torch/serialize/read_adapter_interface.h>
 
-namespace caffe2 {
+namespace torch {
 namespace serialize {
 
 // this is a reader implemented by std::istream

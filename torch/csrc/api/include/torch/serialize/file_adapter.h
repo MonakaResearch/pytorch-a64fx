@@ -4,10 +4,10 @@
 #include <memory>
 #include <c10/macros/Macros.h>
 
-#include "caffe2/serialize/istream_adapter.h"
-#include "caffe2/serialize/read_adapter_interface.h"
+#include <torch/serialize/istream_adapter.h>
+#include <torch/serialize/read_adapter_interface.h>
 
-namespace caffe2 {
+namespace torch {
 namespace serialize {
 
 class TORCH_API FileAdapter final : public ReadAdapterInterface {

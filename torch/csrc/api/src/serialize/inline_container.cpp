@@ -19,15 +19,14 @@
 #include <c10/util/hash.h>
 
 #include "caffe2/core/common.h"
-#include "caffe2/serialize/file_adapter.h"
-#include "caffe2/serialize/inline_container.h"
-#include "caffe2/serialize/istream_adapter.h"
-#include "caffe2/serialize/read_adapter_interface.h"
-
-#include "caffe2/serialize/versions.h"
+#include <torch/serialize/file_adapter.h>
+#include <torch/serialize/inline_container.h>
+#include <torch/serialize/istream_adapter.h>
+#include <torch/serialize/read_adapter_interface.h>
+#include <torch/serialize/versions.h>
 #include "miniz.h"
 
-namespace caffe2 {
+namespace  torch{
 namespace serialize {
 constexpr c10::string_view kDebugPklSuffix(".debug_pkl");
 

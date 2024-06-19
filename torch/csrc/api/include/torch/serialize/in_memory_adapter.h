@@ -1,12 +1,12 @@
 #pragma once
 #include <cstring>
-#include <caffe2/serialize/read_adapter_interface.h>
+#include <torch/serialize/read_adapter_interface.h>
 
 
-namespace caffe2 {
+namespace torch {
 namespace serialize {
 
-class MemoryReadAdapter final : public caffe2::serialize::ReadAdapterInterface {
+class MemoryReadAdapter final : public torch::serialize::ReadAdapterInterface {
  public:
   explicit MemoryReadAdapter(const void* data, off_t size)
       : data_(data), size_(size) {}

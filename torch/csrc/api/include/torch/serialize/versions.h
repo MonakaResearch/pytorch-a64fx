@@ -1,7 +1,7 @@
 #pragma once
 #include <cstdint>
 
-namespace caffe2 {
+namespace torch {
 namespace serialize {
 
 constexpr uint64_t kMinSupportedFileFormatVersion = 0x1L;

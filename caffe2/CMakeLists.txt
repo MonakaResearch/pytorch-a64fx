@@ -98,7 +98,6 @@ if(NOT MSVC AND USE_XNNPACK)
 endif()
 
 add_subdirectory(core)
-add_subdirectory(serialize)
 add_subdirectory(utils)
 if(NOT USE_FBGEMM)
   add_subdirectory(perfkernels)

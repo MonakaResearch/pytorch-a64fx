@@ -12,9 +12,9 @@
 #include <c10/core/Allocator.h>
 #include <c10/core/Backend.h>
 
-#include "caffe2/serialize/istream_adapter.h"
-#include "caffe2/serialize/read_adapter_interface.h"
-#include "caffe2/serialize/versions.h"
+#include <torch/serialize/istream_adapter.h>
+#include <torch/serialize/read_adapter_interface.h>
+#include <torch/serialize/versions.h>
 
 
 extern "C" {
@@ -91,7 +91,7 @@ typedef struct mz_zip_archive mz_zip_archive;
 // model.json as the last file when writing after we have accumulated all
 // other information.
 
-namespace caffe2 {
+namespace  torch {
 namespace serialize {
 
 static constexpr const char* kSerializationIdRecordName = ".data/serialization_id";
