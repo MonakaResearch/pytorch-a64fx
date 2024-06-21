@@ -1,7 +1,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <algorithm>
-#include <cerrno>
 #include <cstdio>
 #include <cstring>
 #include <fstream>
@@ -17,12 +16,9 @@
 #include <c10/util/Logging.h>
 #include <c10/util/hash.h>
 
+#include <miniz.h>
 #include <torch/serialize/file_adapter.h>
 #include <torch/serialize/inline_container.h>
-#include <torch/serialize/istream_adapter.h>
-#include <torch/serialize/read_adapter_interface.h>
-#include <torch/serialize/versions.h>
-#include "miniz.h"
 
 namespace torch::serialize {
 constexpr c10::string_view kDebugPklSuffix(".debug_pkl");
@@ -402,7 +398,8 @@ size_t PyTorchStreamReader::getRecordMultiReaders(
         }
         readSizes[i] = size;
         LOG(INFO) << "Thread " << i << " read [" << startPos << "-" << endPos
-                  << "] " << "from " << name << " of size " << n;
+                  << "] "
+                  << "from " << name << " of size " << n;
         TORCH_CHECK(
             threadReadSize == size,
             "record size ",

@@ -61,10 +61,7 @@ TEST(PyTorchStreamWriterAndReader, SaveAndLoad) {
   ASSERT_TRUE(reader.hasRecord("key1"));
   ASSERT_TRUE(reader.hasRecord("key2"));
   ASSERT_FALSE(reader.hasRecord("key2000"));
-  at::DataPtr data_ptr;
-  // NOLINTNEXTLINE(cppcoreguidelines-init-variables)
-  int64_t size;
-  std::tie(data_ptr, size) = reader.getRecord("key1");
+  auto [data_ptr, size] = reader.getRecord("key1");
   size_t off1 = reader.getRecordOffset("key1");
   ASSERT_EQ(size, data1.size());
   ASSERT_EQ(memcmp(data_ptr.get(), data1.data(), data1.size()), 0);
@@ -115,10 +112,8 @@ TEST(PyTorchStreamWriterAndReader, LoadWithMultiThreads) {
     return oss ? n : 0;
   });
 
-  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init,cppcoreguidelines-avoid-magic-numbers)
-  std::array<char, 127> data1;
-  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init,cppcoreguidelines-avoid-magic-numbers)
-  std::array<char, 64> data2;
+  std::array<char, 127> data1{};
+  std::array<char, 64> data2{};
   for (auto i : c10::irange(data1.size())) {
     data1[i] = data1.size() - i;
   }
@@ -149,15 +144,15 @@ TEST(PyTorchStreamWriterAndReader, LoadWithMultiThreads) {
   PyTorchStreamReader reader(&iss);
   reader.setAdditionalReaderSizeThreshold(0);
   // before testing, sanity check
-  int64_t size1, size2, ret;
-  at::DataPtr data_ptr;
-  std::tie(data_ptr, size1) = reader.getRecord("key1");
+  int64_t size2 = 0;
+  auto [data_ptr, size1] = reader.getRecord("key1");
   std::tie(data_ptr, size2) = reader.getRecord("key2");
 
   // Test getRecord(name, additional_readers)
   std::vector<std::shared_ptr<ReadAdapterInterface>> additionalReader;
   for(int i=0; i<10; ++i){
     // Test various sized additional readers.
+    int64_t ret = 0;
     std::tie(data_ptr, ret) = reader.getRecord("key1", additionalReader);
     ASSERT_EQ(ret, size1);
     ASSERT_EQ(memcmp(data_ptr.get(), data1.data(), size1), 0);
@@ -172,6 +167,7 @@ TEST(PyTorchStreamWriterAndReader, LoadWithMultiThreads) {
   std::vector<uint8_t> dst1(size1), dst2(size2);
   for(int i=0; i<10; ++i){
     // Test various sizes of read threads
+    int64_t ret = 0;
     additionalReader.push_back(std::make_unique<IStreamAdapter>(&iss));
 
     ret = reader.getRecord("key1", dst1.data(), size1, additionalReader);
@@ -230,7 +226,6 @@ TEST(PytorchStreamWriterAndReader, GetNonexistentRecordThrows) {
 
   // read records through readers
   PyTorchStreamReader reader(&iss);
-  // NOLINTNEXTLINE(hicpp-avoid-goto,cppcoreguidelines-avoid-goto)
   EXPECT_THROW(reader.getRecord("key3"), c10::Error);
   std::vector<uint8_t> dst(data1.size());
   EXPECT_THROW(reader.getRecord("key3", dst.data(), data1.size()), c10::Error);
@@ -291,13 +286,10 @@ TEST(PytorchStreamWriterAndReader, SkipDebugRecords) {
 
   // read records through readers
   PyTorchStreamReader reader(&iss);
-  // NOLINTNEXTLINE(hicpp-avoid-goto,cppcoreguidelines-avoid-goto)
 
   reader.setShouldLoadDebugSymbol(false);
   EXPECT_FALSE(reader.hasRecord("key1.debug_pkl"));
-  at::DataPtr ptr;
-  size_t size;
-  std::tie(ptr, size) = reader.getRecord("key1.debug_pkl");
+  auto [ptr, size] = reader.getRecord("key1.debug_pkl");
   EXPECT_EQ(size, 0);
   std::vector<uint8_t> dst(data1.size());
   size_t ret = reader.getRecord("key1.debug_pkl", dst.data(), data1.size());
@@ -337,7 +329,6 @@ TEST(PytorchStreamWriterAndReader, ValidSerializationId) {
 
   // read records through readers
   PyTorchStreamReader reader(&iss);
-  // NOLINTNEXTLINE(hicpp-avoid-goto,cppcoreguidelines-avoid-goto)
 
   EXPECT_EQ(reader.serializationId(), writer_serialization_id);
 
@@ -380,7 +371,6 @@ TEST(PytorchStreamWriterAndReader, SkipDuplicateSerializationIdRecords) {
 
   // read records through readers
   PyTorchStreamReader reader(&iss);
-  // NOLINTNEXTLINE(hicpp-avoid-goto,cppcoreguidelines-avoid-goto)
 
   EXPECT_EQ(reader.serializationId(), writer_serialization_id);
   // clean up

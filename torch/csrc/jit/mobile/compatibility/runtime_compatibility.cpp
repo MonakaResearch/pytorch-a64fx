@@ -1,10 +1,10 @@
 #include <ATen/core/dispatch/Dispatcher.h>
 #include <ATen/core/type_factory.h>
-#include <torch/serialize/inline_container.h>
 #include <torch/csrc/jit/mobile/compatibility/runtime_compatibility.h>
 #include <torch/csrc/jit/mobile/type_parser.h>
 #include <torch/csrc/jit/runtime/operator.h>
 #include <torch/custom_class.h>
+#include <torch/serialize/inline_container.h>
 #include <torch/serialize/versions.h>
 #include <unordered_map>
 

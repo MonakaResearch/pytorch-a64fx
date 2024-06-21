@@ -1,7 +1,5 @@
 #include <ATen/core/ivalue.h>
 #include <c10/util/Exception.h>
-#include <torch/serialize/file_adapter.h>
-#include <torch/serialize/inline_container.h>
 #include <torch/csrc/jit/mobile/compatibility/backport_manager.h>
 #include <torch/csrc/jit/mobile/compatibility/model_compatibility.h>
 #include <torch/csrc/jit/mobile/import.h>
@@ -9,6 +7,8 @@
 #include <torch/csrc/jit/serialization/export.h>
 #include <torch/csrc/jit/serialization/import.h>
 #include <torch/csrc/jit/serialization/pickler.h>
+#include <torch/serialize/file_adapter.h>
+#include <torch/serialize/inline_container.h>
 #include <cstddef>
 #include <sstream>
 

@@ -37,7 +37,7 @@ FileAdapter::RAIIFile::~RAIIFile() {
 
 // FileAdapter directly calls C file API.
 FileAdapter::FileAdapter(const std::string& file_name) : file_(file_name) {
-  const int fseek_ret = fseek(file_.fp_, 0L, SEEK_END);
+  int fseek_ret = fseek(file_.fp_, 0L, SEEK_END);
   TORCH_CHECK(fseek_ret == 0, "fseek returned ", fseek_ret);
 #if defined(_MSC_VER)
   const int64_t ftell_ret = _ftelli64(file_.fp_);
@@ -46,7 +46,8 @@ FileAdapter::FileAdapter(const std::string& file_name) : file_(file_name) {
 #endif
   TORCH_CHECK(ftell_ret != -1L, "ftell returned ", ftell_ret);
   size_ = ftell_ret;
-  rewind(file_.fp_);
+  fseek_ret = fseek(file_.fp_, 0L, SEEK_SET);
+  TORCH_CHECK(fseek_ret == 0, "fseek returned ", fseek_ret);
 }
 
 size_t FileAdapter::size() const {

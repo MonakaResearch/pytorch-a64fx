@@ -1,6 +1,4 @@
 #include <ATen/core/ivalue.h>
-#include <torch/serialize/file_adapter.h>
-#include <torch/serialize/inline_container.h>
 #include <torch/csrc/jit/api/compilation_unit.h> // removed after using simple type_resolver/obj_loader
 #include <torch/csrc/jit/mobile/compatibility/model_compatibility.h>
 #include <torch/csrc/jit/mobile/file_format.h>
@@ -9,6 +7,8 @@
 #include <torch/csrc/jit/mobile/type_parser.h>
 #include <torch/csrc/jit/serialization/import_export_constants.h>
 #include <torch/csrc/jit/serialization/import_read.h>
+#include <torch/serialize/file_adapter.h>
+#include <torch/serialize/inline_container.h>
 
 #include <torch/serialize/in_memory_adapter.h>
 #include <sstream>
