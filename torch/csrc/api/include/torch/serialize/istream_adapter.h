@@ -2,11 +2,10 @@
 
 #include <istream>
 
-#include "c10/macros/Macros.h"
+#include <c10/macros/Macros.h>
 #include <torch/serialize/read_adapter_interface.h>
 
-namespace torch {
-namespace serialize {
+namespace torch::serialize {
 
 // this is a reader implemented by std::istream
 class TORCH_API IStreamAdapter final : public ReadAdapterInterface {
@@ -23,5 +22,4 @@ class TORCH_API IStreamAdapter final : public ReadAdapterInterface {
   void validate(const char* what) const;
 };
 
-} // namespace serialize
-} // namespace caffe2
+} // namespace torch::serialize

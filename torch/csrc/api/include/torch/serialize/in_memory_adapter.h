@@ -1,10 +1,10 @@
 #pragma once
-#include <cstring>
+#include <sys/types.h>
 #include <torch/serialize/read_adapter_interface.h>
 
+#include <cstring>
 
-namespace torch {
-namespace serialize {
+namespace torch::serialize {
 
 class MemoryReadAdapter final : public torch::serialize::ReadAdapterInterface {
  public:
@@ -15,9 +15,11 @@ class MemoryReadAdapter final : public torch::serialize::ReadAdapterInterface {
     return size_;
   }
 
-  size_t read(uint64_t pos, void* buf, size_t n, const char* what = "")
-      const override {
-    (void) what;
+  size_t read(
+      uint64_t pos,
+      void* buf,
+      size_t n,
+      [[maybe_unused]] const char* what = "") const override {
     memcpy(buf, (int8_t*)(data_) + pos, n);
     return n;
   }
@@ -27,6 +29,4 @@ class MemoryReadAdapter final : public torch::serialize::ReadAdapterInterface {
   off_t size_;
 };
 
-
-} // namespace serialize
-} // namespace caffe2
+} // namespace torch::serialize

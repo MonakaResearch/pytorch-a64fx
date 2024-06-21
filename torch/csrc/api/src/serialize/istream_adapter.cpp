@@ -1,8 +1,7 @@
-#include <torch/serialize/istream_adapter.h>
 #include <c10/util/Exception.h>
+#include <torch/serialize/istream_adapter.h>
 
-namespace torch {
-namespace serialize {
+namespace torch::serialize {
 
 IStreamAdapter::IStreamAdapter(std::istream* istream) : istream_(istream) {}
 
@@ -34,7 +33,5 @@ void IStreamAdapter::validate(const char* what) const {
 }
 
 // NOLINTNEXTLINE(modernize-use-equals-default)
-IStreamAdapter::~IStreamAdapter() {}
-
-} // namespace serialize
-} // namespace caffe2
+IStreamAdapter::~IStreamAdapter() = default;
+} // namespace torch::serialize

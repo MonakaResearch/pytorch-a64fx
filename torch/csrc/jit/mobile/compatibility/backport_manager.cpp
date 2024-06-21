@@ -1,7 +1,7 @@
 #include <ATen/core/ivalue.h>
 #include <c10/util/Exception.h>
-#include <caffe2/serialize/file_adapter.h>
-#include <caffe2/serialize/inline_container.h>
+#include <torch/serialize/file_adapter.h>
+#include <torch/serialize/inline_container.h>
 #include <torch/csrc/jit/mobile/compatibility/backport_manager.h>
 #include <torch/csrc/jit/mobile/compatibility/model_compatibility.h>
 #include <torch/csrc/jit/mobile/import.h>
@@ -15,9 +15,9 @@
 namespace torch {
 namespace jit {
 
-using caffe2::serialize::IStreamAdapter;
-using caffe2::serialize::PyTorchStreamReader;
-using caffe2::serialize::PyTorchStreamWriter;
+using torch::serialize::IStreamAdapter;
+using torch::serialize::PyTorchStreamReader;
+using torch::serialize::PyTorchStreamWriter;
 
 // Current support bytecode version
 namespace {

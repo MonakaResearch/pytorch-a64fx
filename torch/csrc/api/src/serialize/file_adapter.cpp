@@ -1,15 +1,13 @@
-#include <torch/serialize/file_adapter.h>
 #include <c10/util/Exception.h>
+#include <torch/serialize/file_adapter.h>
 #include <cerrno>
 #include <cstdio>
 #include <string>
-#include "caffe2/core/common.h"
 
-namespace torch {
-namespace serialize {
+namespace torch::serialize {
 
-FileAdapter::RAIIFile::RAIIFile(const std::string& file_name) {
-  fp_ = fopen(file_name.c_str(), "rb");
+FileAdapter::RAIIFile::RAIIFile(const std::string& file_name)
+    : fp_(fopen(file_name.c_str(), "rb")) {
   if (fp_ == nullptr) {
     auto old_errno = errno;
 #if defined(_WIN32) && (defined(__MINGW32__) || defined(_MSC_VER))
@@ -77,5 +75,5 @@ size_t FileAdapter::read(uint64_t pos, void* buf, size_t n, const char* what)
 
 FileAdapter::~FileAdapter() = default;
 
-} // namespace serialize
-} // namespace caffe2
+} // namespace torch::serialize
+// namespace caffe2

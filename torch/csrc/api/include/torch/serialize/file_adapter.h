@@ -1,8 +1,8 @@
 #pragma once
 
+#include <c10/macros/Macros.h>
 #include <fstream>
 #include <memory>
-#include <c10/macros/Macros.h>
 
 #include <torch/serialize/istream_adapter.h>
 #include <torch/serialize/read_adapter_interface.h>
@@ -33,4 +33,4 @@ class TORCH_API FileAdapter final : public ReadAdapterInterface {
 };
 
 } // namespace serialize
-} // namespace caffe2
+} // namespace torch

@@ -3,8 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 
-#include "c10/macros/Export.h"
-
+#include <c10/macros/Export.h>
 
 namespace torch::serialize {
 
@@ -20,4 +19,3 @@ class TORCH_API ReadAdapterInterface {
 };
 
 } // namespace torch::serialize
-

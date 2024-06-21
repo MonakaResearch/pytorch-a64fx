@@ -130,4 +130,4 @@ constexpr uint64_t kMinSupportedBytecodeVersion = 0x4L;
 constexpr uint64_t kMaxSupportedBytecodeVersion = 0x9L;
 
 } // namespace serialize
-} // namespace caffe2
+} // namespace torch
