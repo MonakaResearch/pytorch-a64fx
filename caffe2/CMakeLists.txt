@@ -1292,14 +1292,9 @@ set(TORCH_PYTHON_LINK_FLAGS ${TORCH_PYTHON_LINK_FLAGS} PARENT_SCOPE)
 # END formerly-libtorch flags
 # ==========================================================
 
-if(NOT NO_API)
-  target_include_directories(torch_cpu PUBLIC
-    $<BUILD_INTERFACE:${TORCH_SRC_DIR}/csrc/api>
-    $<BUILD_INTERFACE:${TORCH_SRC_DIR}/csrc/api/include>)
-else()
-  target_include_directories(torch_cpu PUBLIC
-    $<BUILD_INTERFACE:${TORCH_SRC_DIR}/csrc/api/include>)
-endif()
+target_include_directories(torch_cpu PUBLIC
+  $<BUILD_INTERFACE:${TORCH_SRC_DIR}/csrc/api>
+  $<BUILD_INTERFACE:${TORCH_SRC_DIR}/csrc/api/include>)
 
 if(USE_ROCM)
   target_compile_definitions(torch_hip PRIVATE
