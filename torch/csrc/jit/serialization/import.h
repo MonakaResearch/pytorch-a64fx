@@ -1,9 +1,9 @@
 #pragma once
 
 #include <ATen/core/ivalue.h>
+#include <torch/csrc/api/include/torch/serialize/inline_container.h>
 #include <torch/csrc/jit/api/module.h>
 #include <torch/csrc/jit/ir/ir.h>
-#include <torch/serialize/inline_container.h>
 
 #include <istream>
 

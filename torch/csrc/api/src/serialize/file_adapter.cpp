@@ -1,5 +1,5 @@
 #include <c10/util/Exception.h>
-#include <torch/serialize/file_adapter.h>
+#include <torch/csrc/api/include/torch/serialize/file_adapter.h>
 #include <cerrno>
 #include <cstdio>
 #include <string>
@@ -73,8 +73,6 @@ size_t FileAdapter::read(uint64_t pos, void* buf, size_t n, const char* what)
       fseek_ret == 0, "fseek returned ", fseek_ret, ", context: ", what);
   return fread(buf, 1, n, file_.fp_);
 }
-
-FileAdapter::~FileAdapter() = default;
 
 } // namespace torch::serialize
 // namespace caffe2

@@ -11,9 +11,9 @@
 #include <c10/core/Allocator.h>
 #include <c10/core/Backend.h>
 
-#include <torch/serialize/istream_adapter.h>
-#include <torch/serialize/read_adapter_interface.h>
-#include <torch/serialize/versions.h>
+#include <torch/csrc/api/include/torch/serialize/istream_adapter.h>
+#include <torch/csrc/api/include/torch/serialize/read_adapter_interface.h>
+#include <torch/csrc/api/include/torch/serialize/versions.h>
 
 extern "C" {
 typedef struct mz_zip_archive mz_zip_archive;

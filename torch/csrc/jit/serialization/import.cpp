@@ -1,9 +1,9 @@
 #include <ATen/core/interned_strings.h>
-#include <torch/serialize/file_adapter.h>
-#include <torch/serialize/in_memory_adapter.h>
-#include <torch/serialize/inline_container.h>
-#include <torch/serialize/istream_adapter.h>
-#include <torch/serialize/read_adapter_interface.h>
+#include <torch/csrc/api/include/torch/serialize/file_adapter.h>
+#include <torch/csrc/api/include/torch/serialize/in_memory_adapter.h>
+#include <torch/csrc/api/include/torch/serialize/inline_container.h>
+#include <torch/csrc/api/include/torch/serialize/istream_adapter.h>
+#include <torch/csrc/api/include/torch/serialize/read_adapter_interface.h>
 
 #include <torch/csrc/jit/api/compilation_unit.h>
 

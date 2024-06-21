@@ -1,9 +1,7 @@
 #include <c10/util/Exception.h>
-#include <torch/serialize/istream_adapter.h>
+#include <torch/csrc/api/include/torch/serialize/istream_adapter.h>
 
 namespace torch::serialize {
-
-IStreamAdapter::IStreamAdapter(std::istream* istream) : istream_(istream) {}
 
 size_t IStreamAdapter::size() const {
   auto prev_pos = istream_->tellg();
@@ -32,6 +30,4 @@ void IStreamAdapter::validate(const char* what) const {
   }
 }
 
-// NOLINTNEXTLINE(modernize-use-equals-default)
-IStreamAdapter::~IStreamAdapter() = default;
 } // namespace torch::serialize

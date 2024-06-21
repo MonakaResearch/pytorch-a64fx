@@ -17,8 +17,8 @@
 #include <c10/util/hash.h>
 
 #include <miniz.h>
-#include <torch/serialize/file_adapter.h>
-#include <torch/serialize/inline_container.h>
+#include <torch/csrc/api/include/torch/serialize/file_adapter.h>
+#include <torch/csrc/api/include/torch/serialize/inline_container.h>
 
 namespace torch::serialize {
 constexpr c10::string_view kDebugPklSuffix(".debug_pkl");

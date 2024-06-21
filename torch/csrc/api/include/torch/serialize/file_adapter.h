@@ -1,11 +1,9 @@
 #pragma once
 
 #include <c10/macros/Macros.h>
-#include <fstream>
-#include <memory>
 
-#include <torch/serialize/istream_adapter.h>
-#include <torch/serialize/read_adapter_interface.h>
+#include <torch/csrc/api/include/torch/serialize/istream_adapter.h>
+#include <torch/csrc/api/include/torch/serialize/read_adapter_interface.h>
 
 namespace torch {
 namespace serialize {
@@ -17,7 +15,7 @@ class TORCH_API FileAdapter final : public ReadAdapterInterface {
   size_t size() const override;
   size_t read(uint64_t pos, void* buf, size_t n, const char* what = "")
       const override;
-  ~FileAdapter() override;
+  ~FileAdapter() override = default;
 
  private:
   // An RAII Wrapper for a FILE pointer. Closes on destruction.

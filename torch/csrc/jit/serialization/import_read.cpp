@@ -1,5 +1,4 @@
 #include <torch/csrc/jit/serialization/import_read.h>
-#include <torch/serialize/inline_container.h>
 
 #include <utility>
 

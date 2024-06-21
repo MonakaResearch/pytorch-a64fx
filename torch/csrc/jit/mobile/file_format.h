@@ -10,7 +10,7 @@
 
 #include <c10/core/CPUAllocator.h>
 #include <c10/core/impl/alloc_cpu.h>
-#include <torch/serialize/read_adapter_interface.h>
+#include <torch/csrc/api/include/torch/serialize/read_adapter_interface.h>
 
 #if defined(HAVE_MMAP)
 #include <fcntl.h>

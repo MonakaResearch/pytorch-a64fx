@@ -8,6 +8,9 @@
 #include <c10/util/Optional.h>
 #include <c10/util/ScopeExit.h>
 #include <c10/util/irange.h>
+#include <torch/csrc/api/include/torch/serialize/in_memory_adapter.h>
+#include <torch/csrc/api/include/torch/serialize/inline_container.h>
+#include <torch/csrc/api/include/torch/serialize/read_adapter_interface.h>
 #include <torch/csrc/jit/api/compilation_unit.h>
 #include <torch/csrc/jit/mobile/file_format.h>
 #include <torch/csrc/jit/mobile/flatbuffer_loader.h>
@@ -19,9 +22,6 @@
 #include <torch/csrc/jit/serialization/import_export_functions.h>
 #include <torch/csrc/jit/serialization/import_read.h>
 #include <torch/custom_class.h>
-#include <torch/serialize/in_memory_adapter.h>
-#include <torch/serialize/inline_container.h>
-#include <torch/serialize/read_adapter_interface.h>
 #include <string>
 #include <vector>
 

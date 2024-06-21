@@ -1,6 +1,6 @@
 #pragma once
 #include <sys/types.h>
-#include <torch/serialize/read_adapter_interface.h>
+#include <torch/csrc/api/include/torch/serialize/read_adapter_interface.h>
 
 #include <cstring>
 

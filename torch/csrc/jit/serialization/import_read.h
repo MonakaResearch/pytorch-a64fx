@@ -1,7 +1,7 @@
 #pragma once
 
+#include <torch/csrc/api/include/torch/serialize/inline_container.h>
 #include <torch/csrc/jit/serialization/unpickler.h>
-#include <torch/serialize/inline_container.h>
 #include <memory>
 
 namespace torch::jit {

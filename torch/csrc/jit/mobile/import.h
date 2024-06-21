@@ -5,7 +5,7 @@
 #include <istream>
 #include <memory>
 
-#include <torch/serialize/file_adapter.h>
+#include <torch/csrc/api/include/torch/serialize/file_adapter.h>
 
 namespace torch {
 namespace jit {
