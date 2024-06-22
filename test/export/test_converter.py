@@ -763,6 +763,14 @@ class TestConverter(TestCase):
         inp = (torch.tensor([[1, 2, 3], [4, 5, 6]]),)
         self._check_equal_ts_ep_converter(Module(), inp, ["script"])
 
+    def test_ts2ep_max(self):
+        class M(torch.nn.Module):
+            def forward(self, x: torch.Tensor):
+                return torch.max(x, dim=0)
+
+        inp = (torch.randn([4, 4]),)
+        self._check_equal_ts_ep_converter(M(), inp, ["script"])
+
 
 if __name__ == "__main__":
     run_tests()
