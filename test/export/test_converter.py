@@ -763,12 +763,24 @@ class TestConverter(TestCase):
         inp = (torch.tensor([[1, 2, 3], [4, 5, 6]]),)
         self._check_equal_ts_ep_converter(Module(), inp, ["script"])
 
-    def test_ts2ep_max(self):
+    def test_ts2ep_multi_outputs_on_call_ops(self):
         class M(torch.nn.Module):
-            def forward(self, x: torch.Tensor):
-                return torch.max(x, dim=0)
+            def __init__(self):
+                super().__init__()
+                self.pool = torch.nn.AdaptiveMaxPool2d((2, 2), return_indices=True)
 
-        inp = (torch.randn([4, 4]),)
+            def forward(self, x: torch.Tensor, y: torch.Tensor):
+                return (
+                    torch.max(x, dim=0),
+                    torch.topk(x, 3),
+                    torch.sort(x, dim=0),
+                    self.pool(y)
+                )
+
+        inp = (
+            torch.randn([4, 4]),
+            torch.randn([1, 1, 10, 10])
+        )
         self._check_equal_ts_ep_converter(M(), inp, ["script"])
 
 
