@@ -992,6 +992,9 @@ namespace {
         blend_init(a, b);
         test_blendv<vec, VT, 0, vec::size()>(expected_val, a, b, mask);
     }
+// NOTE: In this test, blend<mask> is not required to implement SVE Vectorized::set.
+// so, this test is disabled for SVE.
+#if !defined(CPU_CAPABILITY_SVE)
     TYPED_TEST(BitwiseFloatsAdditional2, Blend) {
         using vec = TypeParam;
         using VT = ValueType<TypeParam>;
@@ -1005,6 +1008,7 @@ namespace {
         constexpr int64_t power_sets = 1LL << (vec::size());
         test_blend<vec, VT, power_sets - 1>(expected_val, a, b);
     }
+#endif
     template<typename vec, typename VT>
     // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
     void test_set(VT expected_val[vec::size()], VT a[vec::size()], VT b[vec::size()], int64_t count){
@@ -1606,6 +1610,7 @@ namespace {
       ASSERT_TRUE(vec_pinf.has_inf_nan()) << "Test failed for positive Infinity\n";
       ASSERT_TRUE(vec_ninf.has_inf_nan()) << "Test failed for negative Infinity\n";
     }
+#if !defined(CPU_CAPABILITY_SVE)
     TYPED_TEST(VecConvertTests, Convert) {
       using vec = TypeParam;
       using src_t = ValueType<TypeParam>;
@@ -1658,6 +1663,7 @@ namespace {
       TEST_CONVERT_TO(double);
     #undef TEST_CONVERT_TO
     }
+#endif
     TYPED_TEST(VecMaskTests, MaskedLoad) {
       using vec = TypeParam;
       using VT = ValueType<TypeParam>;

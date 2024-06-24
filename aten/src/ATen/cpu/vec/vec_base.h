@@ -43,7 +43,7 @@
 #endif
 
 // These macros helped us unify vec_base.h
-#ifdef CPU_CAPABILITY_AVX512
+#if defined(CPU_CAPABILITY_AVX512) || defined(CPU_CAPABILITY_SVE512)
 #if defined(__GNUC__)
 #define __at_align__ __attribute__((aligned(64)))
 #elif defined(_WIN32)
@@ -53,7 +53,7 @@
 #endif
 #define VECTOR_WIDTH 64
 #define int_vector __m512i
-#else // CPU_CAPABILITY_AVX512
+#else // CPU_CAPABILITY_AVX512 || defined(CPU_CAPABILITY_SVE512)
 #if defined(__GNUC__)
 #define __at_align__ __attribute__((aligned(32)))
 #elif defined(_WIN32)
@@ -63,7 +63,7 @@
 #endif
 #define VECTOR_WIDTH 32
 #define int_vector __m256i
-#endif // CPU_CAPABILITY_AVX512
+#endif // CPU_CAPABILITY_AVX512 || defined(CPU_CAPABILITY_SVE512)
 
 namespace at::vec {
 // See Note [CPU_CAPABILITY namespace]

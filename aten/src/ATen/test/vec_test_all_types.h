@@ -16,7 +16,7 @@
 #include <float.h>
 #include <algorithm>
 
-#if defined(CPU_CAPABILITY_AVX512)
+#if defined(CPU_CAPABILITY_AVX512) || defined(CPU_CAPABILITY_SVE512)
 #define CACHE_LINE 64
 #else
 #define CACHE_LINE 32
@@ -52,6 +52,9 @@ CACHE_ALIGN #define
 #if defined(CPU_CAPABILITY_ZVECTOR) || defined(CPU_CAPABILITY_VSX) || defined(CPU_CAPABILITY_AVX2) || \
   defined(CPU_CAPABILITY_AVX512) && (defined(__GNUC__) || defined(__GNUG__))
 #undef CHECK_DEQUANT_WITH_LOW_PRECISION
+#define CHECK_WITH_FMA 1
+#elif defined(CPU_CAPABILITY_SVE)
+#define CHECK_DEQUANT_WITH_LOW_PRECISION 1
 #define CHECK_WITH_FMA 1
 #elif !defined(CPU_CAPABILITY_VSX) && !defined(CPU_CAPABILITY_AVX2)
 #undef CHECK_DEQUANT_WITH_LOW_PRECISION
