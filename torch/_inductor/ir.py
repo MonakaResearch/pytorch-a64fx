@@ -2545,7 +2545,7 @@ class DtypeView(BaseView):
     def make_loader(self):
         inner = self.data.make_loader()
         def loader(idx):
-            return ops.to_dtype_bitcast(inner(idx), self.target_dtype, self.dtype)
+            return ops.to_dtype_bitcast(inner(idx), self.target_dtype, self.data.dtype)
         return loader
 
     def codegen_reference(self, writer=None):
