@@ -42,6 +42,7 @@ from torch._dynamo.utils import identity
 from torch._export.serde.serialize import GraphModuleSerializer
 from torch._higher_order_ops.auto_functionalize import can_auto_functionalize
 from torch._inductor import metrics
+from torch._library.fake_class_registry import FakeScriptObject  # noqa: TCH001
 from torch._prims_common import (
     compute_required_storage_length,
     is_boolean_dtype,
@@ -4152,7 +4153,9 @@ class ExternKernel(InputsKernel):
         # Rerun fake tensor propagation, because Inductor may have changed the
         # strides of inputs and we need to determine accurately what the
         # output stride will be.
-        example_args: List[Union[torch.Tensor, torch._C.ScriptObject]] = []
+        example_args: List[
+            Union[torch.Tensor, torch._C.ScriptObject, FakeScriptObject]
+        ] = []
 
         # We need to retain the constant values of fake tensors that we originally
         # propagated the graph with, because for some operators running without a
@@ -4162,6 +4165,8 @@ class ExternKernel(InputsKernel):
                 example_args.append(V.graph.constants[x.get_name()])
             elif x.get_name() in V.graph.torchbind_constants:
                 example_args.append(V.graph.torchbind_constants[x.get_name()])
+            elif isinstance(x, TorchBindObject):
+                example_args.append(x.get_value())
             else:
                 example_args.append(ir_node_to_tensor(x, guard_shape=True))
 
@@ -5446,7 +5451,8 @@ class FallbackKernel(ExternKernelAlloc):
     def find_device(tensor_args, example_output):
         if tensor_args:
             devices = [arg.get_device() for arg in tensor_args if arg.get_device()]
-            return devices[0]
+            if len(devices) != 0:
+                return devices[0]
         if isinstance(example_output, torch.Tensor):
             return example_output.device
         if isinstance(example_output, (list, tuple)):
@@ -6250,7 +6256,10 @@ class EffectfulKernel(FallbackKernel):
 
         from torch._higher_order_ops.effects import get_effect_key
 
-        effect_type = get_effect_key(kernel, (*nontensor_args, *tensor_args), kwargs)
+        uncovered_args = [
+            a.value if isinstance(a, TorchBindObject) else a for a in tensor_args
+        ]
+        effect_type = get_effect_key(kernel, (*nontensor_args, *uncovered_args), kwargs)
         assert effect_type is not None
         self.effect_type = effect_type
         self.prev_effect_buffer = V.graph.effectful_ops.get(effect_type, None)
@@ -6273,10 +6282,13 @@ class EffectfulKernel(FallbackKernel):
 @dataclasses.dataclass
 class TorchBindObject(IRNode):
     name: str
-    value: torch._C.ScriptObject
+    value: Union[torch._C.ScriptObject, FakeScriptObject]
 
     def get_name(self):
         return self.name
+
+    def get_value(self):
+        return self.value
 
     def get_device(self):
         return None  # is there a device??
