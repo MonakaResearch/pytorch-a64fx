@@ -779,7 +779,7 @@ class TestConverter(TestCase):
         inp = (torch.tensor([[1, 2, 3], [4, 5, 6]]),)
         self._check_equal_ts_ep_converter(Module(), inp, ["script"])
 
-    def test_invest(self):
+    def test_hidden_input_name(self):
         @torch.jit.script
         def func1(x):
             return x + 1
@@ -792,12 +792,14 @@ class TestConverter(TestCase):
         self._check_equal_ts_ep_converter(func1, inp)
 
         inp = (torch.ones(5, 5),)
+        # Cannot script again.
         self._check_equal_ts_ep_converter(torch.ops.aten.relu, inp, ["trace"])
 
         M = 2
         Ns = [4, 2, 1]
         empty = torch.tensor([], dtype=torch.double)
         values = [empty] + [torch.randn(M, N) for N in Ns]
+        # Cannot script variable length inputs.
         self._check_equal_ts_ep_converter(func2, tuple(values), ["trace"])
 
 
