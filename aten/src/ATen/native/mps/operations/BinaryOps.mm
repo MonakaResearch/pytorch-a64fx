@@ -98,7 +98,7 @@ static void binaryOpTensor(const Tensor& self,
   bool needsCopyToOutput = false;
 
   static const bool is_macOS_15_0_or_newer = is_macos_13_or_newer(MacOSVersion::MACOS_VER_15_0_PLUS);
-  if (!is_macOS_15_0_or_newer && 
+  if (!is_macOS_15_0_or_newer &&
       (needsGather(output_) || (output_.is_view() && (self.is_alias_of(output_) || other.is_alias_of(output_))))) {
     output = at::empty(output_.sizes(), output_.scalar_type(), c10::nullopt, kMPS, c10::nullopt, c10::nullopt);
     needsCopyToOutput = true;
