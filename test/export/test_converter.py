@@ -784,9 +784,21 @@ class TestConverter(TestCase):
         def func1(x):
             return x + 1
 
+        def func2(*args):
+            v = torch.cat(args, dim=1)
+            return v * v
+
         inp = (torch.randn([1, 1]),)
         self._check_equal_ts_ep_converter(func1, inp)
 
+        inp = (torch.ones(5, 5),)
+        self._check_equal_ts_ep_converter(torch.ops.aten.relu, inp, ["trace"])
+
+        M = 2
+        Ns = [4, 2, 1]
+        empty = torch.tensor([], dtype=torch.double)
+        values = [empty] + [torch.randn(M, N) for N in Ns]
+        self._check_equal_ts_ep_converter(func2, tuple(values), ["trace"])
 
 if __name__ == "__main__":
     run_tests()
