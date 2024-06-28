@@ -1512,14 +1512,15 @@ static void addmm_impl_cpu_(
   TORCH_INTERNAL_ASSERT_DEBUG_ONLY(!c.is_conj());
 
   bool dispatched = false;
-#if defined(__aarch64__) && AT_MKLDNN_ACL_ENABLED()
+// #if defined(__aarch64__) && AT_MKLDNN_ACL_ENABLED()
+#if defined(__aarch64__)
   // On AArch64 if LHS matrix in BLAS routine is transposed but RHS is not then
   // it is faster to call oneDNN matrix multiplication primitive with RHS*LHS
   // that will call then into Arm® Compute Library (ACL) GEMM kernel and also
   // additionally have support for running kernel with BF16 instructions
   if (transpose_c) {
     bool apply_heur = apply_mkldnn_matmul_heur(b.sizes()[0], b.sizes()[1], a.sizes()[1]);
-    if (apply_heur && transpose_a && !transpose_b && result.scalar_type() == at::ScalarType::Float) {
+    // if (apply_heur && transpose_a && !transpose_b && result.scalar_type() == at::ScalarType::Float) {
       try {
         mkldnn_matmul(b, a, c, beta.to<float>(), alpha.to<float>());
         // We have dispatched to ACL GEMM for single precision float
@@ -1529,7 +1530,7 @@ static void addmm_impl_cpu_(
         TORCH_WARN("mkldnn_matmul failed, switching to BLAS gemm:", e.what());
         at::globalContext().setUserEnabledMkldnn(false);
       }
-    }
+    //}
   }
 #endif
 
@@ -1776,7 +1777,8 @@ static inline void bmm_out_or_baddbmm_(const Tensor& self_or_result_, const Tens
   };
 
   bool apply_heur = apply_mkldnn_matmul_heur(batch1.sizes()[1], batch1.sizes()[2], batch2.sizes()[2]);
-  if (apply_heur && use_mkldnn_matmul(batch1, batch2, self_or_result)) {
+  // if (apply_heur && use_mkldnn_matmul(batch1, batch2, self_or_result)) {
+  if (apply_heur) {
     try {
       mkldnn_matmul(batch1, batch2, self_or_result, beta.to<float>(), alpha.to<float>());
       return;
