@@ -788,9 +788,12 @@ DEBUG: (TORCH_LOGS="+export" <cmd>), additionaly
             if isinstance(ts_model, torch.jit.ScriptModule)
             else dict()
         )
+        print(self.ts_graph, self.name_to_param_map.keys())
+        breakpoint()
 
     def convert(self) -> ExportedProgram:
         blocks_to_lifted_attrs = get_block_to_lifted_attrs(self.ts_graph)
+        print(blocks_to_lifted_attrs)
 
         graph_converter = TS2FXGraphConverter(
             self.ts_graph,
