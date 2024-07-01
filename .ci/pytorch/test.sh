@@ -667,22 +667,29 @@ test_inductor_torchbench_cpu_smoketest_perf(){
   do
     local model_name=${model_cfg[0]}
     local data_type=${model_cfg[1]}
-    local speedup_target=${model_cfg[4]}
+    local speedup_target=${model_cfg[5]}
+    local inductor_type=${model_cfg[4]}
     if [[ ${model_cfg[3]} == "cpp" ]]; then
       export TORCHINDUCTOR_CPP_WRAPPER=1
     else
       unset TORCHINDUCTOR_CPP_WRAPPER
+    fi
+
+    if [[ ${model_cfg[4]} == "aot" ]]; then
+      local backend="export-aot-inductor"
+    else
+      local backend="backend=inductor"
     fi
     local output_name="$TEST_REPORTS_DIR/inductor_inference_${model_cfg[0]}_${model_cfg[1]}_${model_cfg[2]}_${model_cfg[3]}_cpu_smoketest.csv"
 
     if [[ ${model_cfg[2]} == "dynamic" ]]; then
       taskset -c 0-"$end_core" python benchmarks/dynamo/torchbench.py \
         --inference --performance --"$data_type" -dcpu -n50 --only "$model_name" --dynamic-shapes \
-        --dynamic-batch-only --freezing --timeout 9000 --backend=inductor --output "$output_name"
+        --dynamic-batch-only --freezing --timeout 9000 --"$backend" --output "$output_name"
     else
       taskset -c 0-"$end_core" python benchmarks/dynamo/torchbench.py \
         --inference --performance --"$data_type" -dcpu -n50 --only "$model_name" \
-        --freezing --timeout 9000 --backend=inductor --output "$output_name"
+        --freezing --timeout 9000 --"$backend" --output "$output_name"
     fi
     cat "$output_name"
     # The threshold value needs to be actively maintained to make this check useful.
