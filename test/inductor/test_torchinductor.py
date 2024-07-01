@@ -10535,7 +10535,7 @@ class CommonTemplate:
 
         x = torch.randn((2, 2), device=self.device, dtype=torch.bfloat16)
         y = torch.randn((2, 2), device=self.device, dtype=torch.bfloat16)
-        fn(x, y)
+        self.common(fn, (x, y), reference_in_float=False)
 
     def test_dtypeview_fusion(self):
         @torch.compile
@@ -10546,8 +10546,8 @@ class CommonTemplate:
             return x
 
         torch._inductor.metrics.generated_kernel_count = 0
-        x = torch.randn([1024], dtype=torch.float16, device="cuda")
-        fn(x)
+        x = torch.randn([1024], dtype=torch.float16, device=self.device)
+        self.common(fn, (x,), reference_in_float=False)
         assertGeneratedKernelCountEqual(self, 1)
 
     def test_float16_to_int16(self):
