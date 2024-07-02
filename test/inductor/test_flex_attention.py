@@ -750,15 +750,11 @@ class TestFlexAttention(InductorTestCase):
 
     @supported_platform
     @common_utils.parametrize("dtype", test_dtypes_fast)
-    @common_utils.parametrize(
-        "decoding",
-        [
-            False,
-        ],
-    )
-    # @common_utils.parametrize("decoding", [False, True]) # TODO: Fix decoding
+    @common_utils.parametrize("decoding", [False, True])  # TODO: Fix decoding
     def test_load_from_bias_seq_only(self, dtype, decoding):
         bias = torch.randn(Hq // Hkv if decoding else S, S, device="cuda", dtype=dtype)
+        if bias.shape[-2] < 16:
+            bias = torch.nn.functional.pad(bias, (0, 16 - Hq // Hkv))
 
         def bias_mod(score, b, h, q, kv):
             return score + bias[q, kv]
@@ -766,13 +762,15 @@ class TestFlexAttention(InductorTestCase):
         self.run_test(bias_mod, dtype, decoding=decoding)
 
     @supported_platform
-    @common_utils.parametrize("decoding", [False])
-    # @common_utils.parametrize("decoding", [False, True]) # TODO: Fix decoding
+    @common_utils.parametrize("decoding", [False, True])  # TODO: Fix decoding
     @common_utils.parametrize("dtype", test_dtypes_fast)
     def test_load_from_bias_seq_batch(self, dtype, decoding):
         bias = torch.randn(
             B, Hq // Hkv if decoding else S, S, device="cuda", dtype=dtype
         )
+
+        if bias.shape[-2] < 16:
+            bias = torch.nn.functional.pad(bias, (0, 16 - Hq // Hkv, 0, 0))
 
         def bias_mod(score, b, h, q, kv):
             return score + bias[b, q, kv]
@@ -780,18 +778,19 @@ class TestFlexAttention(InductorTestCase):
         self.run_test(bias_mod, dtype, decoding=decoding)
 
     @supported_platform
-    @common_utils.parametrize("decoding", [False])
-    # @common_utils.parametrize("decoding", [False, True]) # TODO: Fix decoding
+    @common_utils.parametrize("decoding", [False, True])  # TODO: Fix decoding
     @common_utils.parametrize("dtype", test_dtypes_fast)
     def test_load_from_bias_head_seq_batch(self, dtype, decoding):
         bias = torch.randn(
             B,
             Hkv if decoding else H,
-            Hkv // Hq if decoding else S,
+            Hq // Hkv if decoding else S,
             S,
             device="cuda",
             dtype=dtype,
         )
+        if bias.shape[-2] < 16:
+            bias = torch.nn.functional.pad(bias, (0, 16 - Hq // Hkv, 0, 0))
 
         def bias_mod(score, b, h, q, kv):
             return score + bias[b, h, q, kv]
@@ -1018,12 +1017,14 @@ def forward(self, arg0_1, arg1_1, arg2_1, arg3_1, arg4_1):
         self.assertTrue((out - out2).abs().mean() < 1e-2)
 
     @supported_platform
-    # @common_utils.parametrize("decoding", [False, True]) TODO: fix decoding bw
     @common_utils.parametrize("decoding", [False])
+    # @common_utils.parametrize("decoding", [False, True]) #TODO: fix decoding bw
     def test_inputs_are_realized(self, decoding):
         def f(q, k, v):
-            x = torch.randn(Hkv // Hq if decoding else S, device="cuda")
+            x = torch.randn(Hq // Hkv if decoding else S, device="cuda")
             x = x * 2
+            if x.shape[0] < 16:
+                x = torch.nn.functional.pad(x, (0, 16 - Hq // Hkv))
 
             def func(qk, b, h, q, kv):
                 return qk + x[q]
