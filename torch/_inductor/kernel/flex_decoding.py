@@ -30,19 +30,23 @@ flex_decoding_template = TritonTemplate(
     {{def_kernel("Q", "K", "V", "M", "L")}}
     # Sub notation for this kernel:
     # Q: Query, K: Key, V: Value
-    # reduction buffers: M rowmax, L sumexp
-    # output: ACC accumulated output
-    # M: Number of queries, N: Number of keys/values, D: Model dimension
+    # reduction buffers: M rowmax across local KV split, L local sumexp across local KV split
+    # M: Number of queries, N: Number of keys/values, D(BLOCK_DMODEL): Model dimension
     # BLOCK_M, BLOCK_DMODEL: M, and D dimemsion are always assigned to the same block
-    # z: Batch size, h: Number of heads, m: Number of queries per head, k: Number of keys per head t: Number of tiles per query
+    # z: Batch size, h: Number of heads, m: Number of queries per head, k: Number of keys per head t: Number of kv splits
     # (Modifiable) Config options:
     # SPLIT_KV: number of blocks K & V are split into
+    # BLOCK_M: block size that Q is padded along seqlen dim.
     # BLOCK_N: block size of K & V along N dimension.
     # SCORE_MOD_IS_LINEAR: Is the score modifier linear? If so, we can lift the
     # change of base out of the loop
     # ROWS_GUARANTEED_SAFE: Is it guaranteed that at least one value in each row
     # is not masked out? If so, we can skip an extra safety check
-    # OUTPUT_LOGSUMEXP: We only need to store the logsumexp if we require grad
+    # SAFE_M_BOUNDARY: Is Q seqlen a multiple of BLOCK_M? If so, we can skip an extra boundary check for loading query.
+    # SAFE_N_BOUNDARY: Is KV seqlen a multiple of BLOCK_N? If so, we can skip an extra boundary check for loading key/value.
+    #
+    # Output: ACC output accumulated across local KV split.
+
 
     # Define Q Strides
     stride_qz = {{stride("Q", 0)}}
@@ -167,6 +171,7 @@ flex_decoding_template = TritonTemplate(
         # ~~~~~~~~~~~~~~~~~~~ Apply score modification  ~~~~~~~~~~~~~~~~~~~
         m = offs_m[:, None]
         n = start_n + offs_n[None, :]
+        # TODO: Add load mask in modification when M/N Boundary is not safe
         {{ modification(
             subgraph_number=0,
             output_name="post_mod_scores",
@@ -255,6 +260,7 @@ def create_flex_decoding_kernel(*args, **kwargs):
     choices: List[Any] = []
     configs: List[Tuple[int, int, int]] = []
     configs.append(_get_decoding_default_config(key))
+    # Note: max_autotune is not supported yet. Causes error in lowering the dynamic shape in reduction ops.
     # if config.max_autotune:
     #     configs += [
     #         (64, 2, 2),
@@ -324,7 +330,6 @@ def create_flex_decoding_kernel(*args, **kwargs):
             # For now, we always assume the "sound" option
             SCORE_MOD_IS_LINEAR=False,
             ROWS_GUARANTEED_SAFE=False,
-            OUTPUT_LOGSUMEXP=True,
             SAFE_M_BOUNDARY=(query.get_size()[-2] % BLOCK_M) == 0,
             SAFE_N_BOUNDARY=True,
         )
