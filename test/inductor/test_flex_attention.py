@@ -666,7 +666,7 @@ class TestFlexAttention(InductorTestCase):
         v = torch.as_strided(v1, v_shape, v_strides, v_offset)
 
         sdpa_partial = create_attention(
-            score_mod=_generate_alibi_bias(8), block_sparse_mask=None
+            score_mod=_generate_alibi_bias(8), block_mask=None
         )
         compiled_sdpa = torch.compile(sdpa_partial)
         ref_out = sdpa_partial(q, k, v)
