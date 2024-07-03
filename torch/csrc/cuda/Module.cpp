@@ -987,6 +987,7 @@ static void registerCudaDeviceProperties(PyObject* module) {
       .def_readonly("l2CacheSize", &cudaDeviceProp::l2CacheSize)
 #ifndef FBCODE_CAFFE2
       .def_readonly("uuid", &cudaDeviceProp::uuid)
+#endif
       .def("__repr__", [](const cudaDeviceProp& prop) {
         std::ostringstream stream;
         stream << "_CudaDeviceProperties(name='" << prop.name
