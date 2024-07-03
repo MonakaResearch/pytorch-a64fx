@@ -152,36 +152,6 @@ TEST(PyTorchStreamWriterAndReader, LoadWithMultiThreads) {
   auto [data_ptr, size1] = reader.getRecord("key1");
   std::tie(data_ptr, size2) = reader.getRecord("key2");
 
-  // Test getRecord(name, additional_readers)
-  std::vector<std::shared_ptr<ReadAdapterInterface>> additionalReader;
-  for (int i = 0; i < 10; ++i) {
-    // Test various sized additional readers.
-    int64_t ret = 0;
-    std::tie(data_ptr, ret) = reader.getRecord("key1", additionalReader);
-    ASSERT_EQ(ret, size1);
-    ASSERT_EQ(memcmp(data_ptr.get(), data1.data(), size1), 0);
-
-    std::tie(data_ptr, ret) = reader.getRecord("key2", additionalReader);
-    ASSERT_EQ(ret, size2);
-    ASSERT_EQ(memcmp(data_ptr.get(), data2.data(), size2), 0);
-  }
-
-  // Inplace multi-threading getRecord(name, dst, n, additional_readers) test
-  additionalReader.clear();
-  std::vector<uint8_t> dst1(size1), dst2(size2);
-  for (int i = 0; i < 10; ++i) {
-    // Test various sizes of read threads
-    int64_t ret = 0;
-    additionalReader.push_back(std::make_unique<IStreamAdapter>(&iss));
-
-    ret = reader.getRecord("key1", dst1.data(), size1, additionalReader);
-    ASSERT_EQ(ret, size1);
-    ASSERT_EQ(memcmp(dst1.data(), data1.data(), size1), 0);
-
-    ret = reader.getRecord("key2", dst2.data(), size2, additionalReader);
-    ASSERT_EQ(ret, size2);
-    ASSERT_EQ(memcmp(dst2.data(), data2.data(), size2), 0);
-  }
   // clean up
   remove(file_name);
 }

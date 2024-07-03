@@ -129,21 +129,8 @@ class TORCH_API PyTorchStreamReader final {
 
   // return dataptr, size
   std::tuple<at::DataPtr, size_t> getRecord(const std::string& name);
-  // multi-thread getRecord
-  std::tuple<at::DataPtr, size_t> getRecord(
-      const std::string& name,
-      std::vector<std::shared_ptr<ReadAdapterInterface>>& additionalReaders);
   // inplace memory writing
   size_t getRecord(const std::string& name, void* dst, size_t n);
-  // inplace memory writing, multi-threads.
-  // When additionalReaders is empty, the default behavior is call
-  // getRecord(name, dst, n) with default reader This approach can be used for
-  // reading large tensors.
-  size_t getRecord(
-      const std::string& name,
-      void* dst,
-      size_t n,
-      std::vector<std::shared_ptr<ReadAdapterInterface>>& additionalReaders);
   size_t getRecord(
       const std::string& name,
       void* dst,
@@ -152,22 +139,6 @@ class TORCH_API PyTorchStreamReader final {
       void* buf,
       const std::function<void(void*, const void*, size_t)>& memcpy_func =
           nullptr);
-
-  // Concurrent reading records with multiple readers.
-  // additionalReaders are additional clients to access the underlying record at
-  // different offsets and write to different trunks of buffers. If the overall
-  // size of the tensor is 10, and size of additionalReader is 2. The default
-  // thread will read [0,4), the additional reader will read [4,8). The default
-  // reader will read [8,10). The default reader will write to buffer[0,4), the
-  // additional reader will write to buffer[4,8), the additional reader will
-  // write to buffer[8,10). When additionalReaders is empty, the default
-  // behavior is call getRecord(name) with default reader This approach can be
-  // used for reading large tensors.
-  size_t getRecordMultiReaders(
-      const std::string& name,
-      std::vector<std::shared_ptr<ReadAdapterInterface>>& additionalReaders,
-      void* dst,
-      size_t n);
 
   size_t getRecordSize(const std::string& name);
 
