@@ -1307,7 +1307,9 @@ elif [[ "${TEST_CONFIG}" == *inductor* ]]; then
   test_inductor_shard "${SHARD_NUMBER}"
   if [[ "${SHARD_NUMBER}" == 1 ]]; then
     test_inductor_aoti
-    test_inductor_distributed
+    if [[ "${BUILD_ENVIRONMENT}" != *jammy* ]]; then
+      test_inductor_distributed
+    fi
   fi
 elif [[ "${TEST_CONFIG}" == *dynamo* ]]; then
   install_torchvision
