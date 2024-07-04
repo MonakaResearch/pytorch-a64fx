@@ -706,6 +706,7 @@ INSTANTIATE_MV(bfloat);
 )METAL_QUANTIZED");
 
 Tensor _convert_weight_to_int4pack_mps(const Tensor& in, int64_t innerKTiles) {
+  NSLog(@"in _convert_weight_to_int4pack_mps 1");
   TORCH_CHECK(in.dim() == 2, __func__, " : expect weight to be 2D tensor.");
   TORCH_CHECK(in.dtype() == at::kByte, __func__, " : expect weight to be kByte.");
   TORCH_CHECK(innerKTiles == 2 || innerKTiles == 4 || innerKTiles == 8,
@@ -717,13 +718,13 @@ Tensor _convert_weight_to_int4pack_mps(const Tensor& in, int64_t innerKTiles) {
   auto N = weight.size(0);
   auto Kdiv2 = weight.size(1);
   auto K = Kdiv2 * 2;
-
+  NSLog(@"in _convert_weight_to_int4pack_mps 2");
   // Create fake shapes for cpu. The meta registration in dynamo requires
   // operator has the same output shape for each device. So creating a fake
   // shape {N / 8, K / (16 * innerKTiles), 32, innerKTiles / 2}
   auto weight_packed = at::empty({N / 8, K / (16 * innerKTiles), 32, innerKTiles / 2},
                                  at::TensorOptions().dtype(at::kInt).device(at::kMPS));
-
+  NSLog(@"in _convert_weight_to_int4pack_mps 3");
   MPSStream* mpsStream = getCurrentMPSStream();
   std::array<uint32_t, 4> sizes = {static_cast<uint32_t>(N), static_cast<uint32_t>(Kdiv2), 0, 0};
   dispatch_sync_with_rethrow(mpsStream->queue(), ^() {
@@ -734,13 +735,21 @@ Tensor _convert_weight_to_int4pack_mps(const Tensor& in, int64_t innerKTiles) {
       }
 #endif
       id<MTLComputeCommandEncoder> computeEncoder = mpsStream->commandEncoder();
+      NSLog(@"in _convert_weight_to_int4pack_mps 4");
       const std::string kernel = fmt::format("weight_to_int4pack");
+      NSLog(@"in _convert_weight_to_int4pack_mps 4 - 1");
       id<MTLComputePipelineState> quantizedPSO = lib.getPipelineStateForFunc(kernel);
+      NSLog(@"in _convert_weight_to_int4pack_mps 4 - 2");
       const auto maxThreadsPerGroup = [quantizedPSO maxTotalThreadsPerThreadgroup];
+      NSLog(@"in _convert_weight_to_int4pack_mps 4 - 3");
       [computeEncoder setComputePipelineState:quantizedPSO];
+      NSLog(@"in _convert_weight_to_int4pack_mps 4 - 4");
       mtl_setBuffer(computeEncoder, weight, 0);
+      NSLog(@"in _convert_weight_to_int4pack_mps 4 - 5");
       mtl_setBuffer(computeEncoder, weight_packed, 1);
+      NSLog(@"in _convert_weight_to_int4pack_mps 4 - 6");
       mtl_setBytes(computeEncoder, sizes, 2);
+      NSLog(@"in _convert_weight_to_int4pack_mps 5");
       [computeEncoder dispatchThreads:MTLSizeMake(N, Kdiv2, 1) threadsPerThreadgroup:MTLSizeMake(64, 1, 1)];
 #if _CAPTURE_KERNEL
       if (getMPSProfiler().isCapturing()) {
@@ -749,6 +758,7 @@ Tensor _convert_weight_to_int4pack_mps(const Tensor& in, int64_t innerKTiles) {
 #endif
     }
   });
+  NSLog(@"in _convert_weight_to_int4pack_mps 6");
   return weight_packed;
 }
 
