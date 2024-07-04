@@ -47,9 +47,9 @@ torch.set_float32_matmul_precision("high")
 index = torch.ops.aten.index
 
 
-def create_attention(score_mod, block_mask):
+def create_attention(score_mod, block_mask, is_gqa):
     return functools.partial(
-        _flex_attention, score_mod=score_mod, block_mask=block_mask
+        _flex_attention, score_mod=score_mod, block_mask=block_mask, is_gqa=is_gqa
     )
 
 
@@ -230,7 +230,7 @@ class TestFlexAttention(InductorTestCase):
         q_ref, k_ref, v_ref = query_key_value_clones(q, k, v)
         q_gold, k_gold, v_gold = query_key_value_clones(q, k, v, torch.float64)
         block_mask = create_block_mask(score_mod, q, k)
-        sdpa_partial = create_attention(score_mod, block_mask)
+        sdpa_partial = create_attention(score_mod, block_mask, is_gqa=(not Q_H == KV_H))
         compiled_sdpa = torch.compile(sdpa_partial)
         golden_out = sdpa_partial(q_gold, k_gold, v_gold)
         ref_out = sdpa_partial(q_ref, k_ref, v_ref)
@@ -445,6 +445,23 @@ class TestFlexAttention(InductorTestCase):
             B,
             H,
             S // 2,  # Seqlen of Q is different from seqlen of K/V
+            D,
+            B,
+            H,
+            S,
+            D,
+        )
+
+    @supported_platform
+    @common_utils.parametrize("dtype", test_dtypes_fast)
+    @common_utils.parametrize("score_mod", test_score_mods)
+    def test_GQA(self, dtype: torch.dtype, score_mod: Callable):
+        self.run_test(
+            score_mod,
+            dtype,
+            B,
+            H * 4,  # Hq = 4*Hkv.
+            S,
             D,
             B,
             H,

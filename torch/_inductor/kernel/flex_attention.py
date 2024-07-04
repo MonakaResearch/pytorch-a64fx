@@ -188,13 +188,12 @@ flex_attention_template = TritonTemplate(
     # ROWS_GUARANTEED_SAFE: Is it guaranteed that at least one value in each row
     # is not masked out? If so, we can skip an extra safety check
     # OUTPUT_LOGSUMEXP: We only need to store the logsumexp if we require grad
+    # GQA_SHARED_HEAD: number of query heads sharing one kv head in GQA setups.
     #
     # The following SPARSE_* is defined in the block sparse mask grid, rather than the thread block grid.
     # SPARSE_KV_NUM_BLKS: The number of unmasked K/V blocks for each query.
     # SPARSE_KV_IDX: The indices of unmasked K/V blocks for each query.
 
-    tl.static_assert(SPARSE_Q_BLOCK_SIZE >= BLOCK_M and SPARSE_Q_BLOCK_SIZE % BLOCK_M == 0)
-    tl.static_assert(SPARSE_KV_BLOCK_SIZE >= BLOCK_N and SPARSE_KV_BLOCK_SIZE % BLOCK_N == 0)
 
     # Define Q Strides
     stride_qz = {{stride("Q", 0)}}
@@ -228,25 +227,35 @@ flex_attention_template = TritonTemplate(
     k_offset = off_z * stride_kz + off_h * stride_kh
     v_offset = off_z * stride_vz + off_h * stride_vh
 
-    SPARSE_Z = {{size("SPARSE_KV_NUM_BLKS", 0)}}
-    SPARSE_H = {{size("SPARSE_KV_NUM_BLKS", 1)}}
+    use_sparse_mask: tl.constexpr = (not SPARSE_Q_BLOCK_SIZE == 0) and (not SPARSE_KV_BLOCK_SIZE == 0)
+    if use_sparse_mask:
+        tl.static_assert(SPARSE_Q_BLOCK_SIZE >= BLOCK_M and SPARSE_Q_BLOCK_SIZE % BLOCK_M == 0)
+        tl.static_assert(SPARSE_KV_BLOCK_SIZE >= BLOCK_N and SPARSE_KV_BLOCK_SIZE % BLOCK_N == 0)
 
-    sparse_idx_z = off_z % SPARSE_Z
-    sparse_idx_h = off_h % SPARSE_H
 
-    SPARSE_Q_MULTIPLE: tl.constexpr = (SPARSE_Q_BLOCK_SIZE // BLOCK_M)
-    SPARSE_KV_MULTIPLE: tl.constexpr = (SPARSE_KV_BLOCK_SIZE // BLOCK_N)
+        SPARSE_Z = {{size("SPARSE_KV_NUM_BLKS", 0)}}
+        SPARSE_H = {{size("SPARSE_KV_NUM_BLKS", 1)}}
 
-    SPARSE_Q_BLOCK_CNT: tl.constexpr = Q_LEN // SPARSE_Q_BLOCK_SIZE
-    SPARSE_KV_BLOCK_CNT: tl.constexpr = KV_LEN // SPARSE_KV_BLOCK_SIZE
+        sparse_idx_z = off_z % SPARSE_Z
+        sparse_idx_h = off_h % SPARSE_H
 
-    # SPARSE_KV_IDX and SPARSE_KV_NUM_BLKS are always contiguous.
-    sparse_hz_offset = sparse_idx_z * SPARSE_H + sparse_idx_h
-    sparse_kv_num_blks_offset = sparse_hz_offset * SPARSE_Q_BLOCK_CNT + start_m // SPARSE_Q_MULTIPLE
-    sparse_kv_idx_offset = sparse_hz_offset * SPARSE_Q_BLOCK_CNT * SPARSE_KV_BLOCK_CNT + (start_m // SPARSE_Q_MULTIPLE) * SPARSE_KV_BLOCK_CNT  # noqa: B950
-    kv_indices = SPARSE_KV_IDX + sparse_kv_idx_offset
-    kv_start = tl.load(kv_indices) * SPARSE_KV_BLOCK_SIZE # first kv block we're loading
-    sparse_kv_num_blocks = tl.load(SPARSE_KV_NUM_BLKS + sparse_kv_num_blks_offset)
+        SPARSE_Q_MULTIPLE: tl.constexpr = (SPARSE_Q_BLOCK_SIZE // BLOCK_M)
+        SPARSE_KV_MULTIPLE: tl.constexpr = (SPARSE_KV_BLOCK_SIZE // BLOCK_N)
+
+        SPARSE_Q_BLOCK_CNT: tl.constexpr = Q_LEN // SPARSE_Q_BLOCK_SIZE
+        SPARSE_KV_BLOCK_CNT: tl.constexpr = KV_LEN // SPARSE_KV_BLOCK_SIZE
+
+        # SPARSE_KV_IDX and SPARSE_KV_NUM_BLKS are always contiguous.
+        sparse_hz_offset = sparse_idx_z * SPARSE_H + sparse_idx_h
+        sparse_kv_num_blks_offset = sparse_hz_offset * SPARSE_Q_BLOCK_CNT + start_m // SPARSE_Q_MULTIPLE
+        sparse_kv_idx_offset = sparse_hz_offset * SPARSE_Q_BLOCK_CNT * SPARSE_KV_BLOCK_CNT + (start_m // SPARSE_Q_MULTIPLE) * SPARSE_KV_BLOCK_CNT  # noqa: B950
+        kv_indices = SPARSE_KV_IDX + sparse_kv_idx_offset
+        kv_start = tl.load(kv_indices) * SPARSE_KV_BLOCK_SIZE # first kv block we're loading
+        sparse_kv_num_blocks = tl.load(SPARSE_KV_NUM_BLKS + sparse_kv_num_blks_offset)
+        kv_num_n_blocks = sparse_kv_num_blocks * SPARSE_KV_MULTIPLE
+    else:
+        kv_start = 0
+        kv_num_n_blocks = KV_LEN // BLOCK_N
 
     Q_block_ptr = tl.make_block_ptr(
         base=Q + q_offset,
@@ -275,6 +284,7 @@ flex_attention_template = TritonTemplate(
     # initialize offsets
     offs_m = start_m * BLOCK_M + tl.arange(0, BLOCK_M)
     offs_n = kv_start + tl.arange(0, BLOCK_N)
+    offs_hq = offs_m // (Q_LEN // GQA_SHARED_HEAD) + off_h * GQA_SHARED_HEAD
     # initialize pointer to m and l
     m_i = tl.zeros([BLOCK_M], dtype=tl.float32) - float("inf")
     l_i = tl.zeros([BLOCK_M], dtype=tl.float32)
@@ -287,7 +297,7 @@ flex_attention_template = TritonTemplate(
 
     # loop over k, v and update accumulator
     lo = 0
-    hi = sparse_kv_num_blocks * SPARSE_KV_MULTIPLE
+    hi = kv_num_n_blocks
 
     for start_n in range(0, hi):
         # -- load k --
@@ -297,12 +307,13 @@ flex_attention_template = TritonTemplate(
         # ~~~~~~~~~~~~~~~~~~~ Apply score modification  ~~~~~~~~~~~~~~~~~~~
         m = offs_m[:, None]
         n = offs_n[None, :]
+        hq = offs_hq[:, None]
         {{ modification(
             subgraph_number=0,
             output_name="post_mod_scores",
             score="qk",
             b="off_z",
-            h="off_h",
+            h="hq",
             m="m",
             n="n",
             out="qk"
@@ -335,14 +346,17 @@ flex_attention_template = TritonTemplate(
         m_i = m_ij
 
         # update pointers
-        indices_idx = start_n // SPARSE_KV_MULTIPLE
+        if use_sparse_mask:
+            indices_idx = start_n // SPARSE_KV_MULTIPLE
 
-        cur_block = tl.load(kv_indices + indices_idx)
-        next_block = tl.load(kv_indices + indices_idx + 1)
-        needs_jump = (start_n + 1) % SPARSE_KV_MULTIPLE == 0
-        jump_to_block = (next_block - cur_block ) * SPARSE_KV_BLOCK_SIZE - (SPARSE_KV_MULTIPLE - 1) * BLOCK_N
+            cur_block = tl.load(kv_indices + indices_idx)
+            next_block = tl.load(kv_indices + indices_idx + 1)
+            needs_jump = (start_n + 1) % SPARSE_KV_MULTIPLE == 0
+            jump_to_block = (next_block - cur_block ) * SPARSE_KV_BLOCK_SIZE - (SPARSE_KV_MULTIPLE - 1) * BLOCK_N
 
-        offset = jump_to_block * needs_jump + (1 - needs_jump) * BLOCK_N
+            offset = jump_to_block * needs_jump + (1 - needs_jump) * BLOCK_N
+        else:
+            offset = BLOCK_N
 
         V_block_ptr = tl.advance(V_block_ptr, (offset, 0))
         K_block_ptr = tl.advance(K_block_ptr, (0, offset))
@@ -482,19 +496,32 @@ def flex_attention(*args, **kwargs):
     subgraph_buffer = build_subgraph_buffer(
         args, placeholder_inps, subgraph, graph_type=SubgraphType.FWD
     )
-    layout = FixedLayout(
-        query.get_device(),
-        query.get_dtype(),
-        query.get_size(),
-        query.get_stride(),
-    )
     # see NOTE:[TritonTemplates with multiple outputs]
-    logsumexp_shape = query.get_size()[:-1]  # [B, H, M]
+    logsumexp_shape = query.get_size()[:-1]  # [B, Hkv, Hq//Hkv, Mq]
     logsumexp = empty_strided(
         logsumexp_shape,
         None,
         dtype=torch.float32,  # The logsumexp is always stored in fp32 regardless of the input dtype
         device=query.get_device(),
+    )
+
+    # In case of GQA, flatten query, output and lse along Hq//Hkv & Mq dimension
+    is_gqa = len(query.get_size()) > 4
+    gqa_shared_heads = 1  # Hq // Hkv
+    if is_gqa:
+        gqa_shared_heads = query.get_size()[2]
+        flattened_q_shape = query.get_size()[:2] + [
+            query.get_size()[-3] * query.get_size()[-2],
+            query.get_size()[-1],
+        ]
+        query = lowerings[aten.reshape](query, flattened_q_shape)
+        logsumexp = lowerings[aten.reshape](logsumexp, flattened_q_shape[:-1])
+
+    layout = FixedLayout(
+        query.get_device(),
+        query.get_dtype(),
+        query.get_size(),
+        query.get_stride(),
     )
     choices: List[Any] = []
     configs: List[Tuple[int, int, int, int]] = []
@@ -513,9 +540,14 @@ def flex_attention(*args, **kwargs):
     # We do need to explicitly pass it in for autotuning though.
 
     for BLOCK_M, BLOCK_N, num_warps, num_stages in configs:
-        if SPARSE_KV_BLOCK_SIZE % BLOCK_N != 0 or SPARSE_Q_BLOCK_SIZE % BLOCK_M != 0:
-            continue
-
+        if (
+            SPARSE_Q_BLOCK_SIZE != 0 and SPARSE_KV_BLOCK_SIZE % BLOCK_N != 0
+        ):  # if use sparse mask
+            if (
+                SPARSE_KV_BLOCK_SIZE % BLOCK_N != 0
+                or SPARSE_Q_BLOCK_SIZE % BLOCK_M != 0
+            ):  # TODO: find a better way to filter this
+                continue
         flex_attention_template.maybe_append_choice(
             choices=choices,
             input_nodes=[
@@ -539,6 +571,7 @@ def flex_attention(*args, **kwargs):
             BLOCK_M=BLOCK_M,
             BLOCK_N=BLOCK_N,
             BLOCK_DMODEL=query.get_size()[-1],
+            GQA_SHARED_HEAD=gqa_shared_heads,
             # For now, we always assume the "sound" option
             SCORE_MOD_IS_LINEAR=False,
             ROWS_GUARANTEED_SAFE=False,
@@ -554,10 +587,19 @@ def flex_attention(*args, **kwargs):
         sparse_kv_num_blocks,
         sparse_kv_indices,
     ] + list(other_buffers)
+    out = autotune_select_algorithm(
+        "flex_attention", choices, inputs_for_autotuning, layout
+    )
+
+    # In case of gqa, restore flattened Hkv//Hq, Mq shape for logsumexp & out
+    # [B, Hkv, Hq//Hk*Mq, D] -> [B, Hkv, Hq//Hkv, Mq, D]
+    if is_gqa:
+        og_q_shape = out.get_size()[:2] + [gqa_shared_heads, -1, out.get_size()[-1]]
+        logsumexp = lowerings[aten.view](logsumexp, og_q_shape[:-1])
+        out = lowerings[aten.view](out, og_q_shape)
+
     return (
-        autotune_select_algorithm(
-            "flex_attention", choices, inputs_for_autotuning, layout
-        ),
+        out,
         logsumexp,
     )
 
@@ -605,6 +647,7 @@ flex_attention_backward_template = TritonTemplate(
     # BLOCK_N2: when calculating DQ, iterate over BLOCK_N2 across the seqlen dim of K/V in each thread block.
     # SCORE_MOD_IS_LINEAR: Is the score modifier linear? If so, we can lift the
     # change of base out of the loop
+    # GQA_SHARED_HEAD: number of query heads sharing one kv head in GQA setups.
     #
     # The following SPARSE_* is defined in the block sparse mask grid, rather than the thread block grid.
     # SPARSE_KV_NUM_BLKS: The number of unmasked K/V blocks for each query.
@@ -642,6 +685,7 @@ flex_attention_backward_template = TritonTemplate(
     off_z = off_hz // H # batch idx
     off_h = off_hz % H # head idx
 
+    use_sparse_mask: tl.constexpr = (not SPARSE_Q_BLOCK_SIZE == 0) and (not SPARSE_KV_BLOCK_SIZE == 0)
     SM_Z = {{size("SPARSE_KV_NUM_BLKS", 0)}}
     SM_H = {{size("SPARSE_KV_NUM_BLKS", 1)}}
 
@@ -669,19 +713,24 @@ flex_attention_backward_template = TritonTemplate(
         # THIS BLOCK DOES DQ
         off_pid = pid - NUM_KV_BLOCKS
 
-        SPARSE_Q_MULTIPLE = (SPARSE_Q_BLOCK_SIZE // BLOCK_M2)
-        SPARSE_KV_MULTIPLE = (SPARSE_KV_BLOCK_SIZE // BLOCK_N2)
+        if use_sparse_mask:
+            SPARSE_Q_MULTIPLE = (SPARSE_Q_BLOCK_SIZE // BLOCK_M2)
+            SPARSE_KV_MULTIPLE = (SPARSE_KV_BLOCK_SIZE // BLOCK_N2)
 
-        SPARSE_Q_BLOCK_CNT = Q_LEN // SPARSE_Q_BLOCK_SIZE
-        SPARSE_KV_BLOCK_CNT = KV_LEN // SPARSE_KV_BLOCK_SIZE
+            SPARSE_Q_BLOCK_CNT = Q_LEN // SPARSE_Q_BLOCK_SIZE
+            SPARSE_KV_BLOCK_CNT = KV_LEN // SPARSE_KV_BLOCK_SIZE
 
-        # SPARSE_KV_IDX and SPARSE_KV_NUM_BLKS are always contiguous.
-        sparse_hz_offset = sparse_idx_z * SM_H + sparse_idx_h
-        sparse_kv_num_blks_offset = sparse_hz_offset * SPARSE_Q_BLOCK_CNT + off_pid // SPARSE_Q_MULTIPLE
-        sparse_kv_idx_offset = sparse_hz_offset * SPARSE_Q_BLOCK_CNT * SPARSE_KV_BLOCK_CNT + (off_pid // SPARSE_Q_MULTIPLE) * SPARSE_KV_BLOCK_CNT  # noqa: B950
-        kv_indices = SPARSE_KV_IDX + sparse_kv_idx_offset
-        kv_start = tl.load(kv_indices) * SPARSE_KV_BLOCK_SIZE # first kv block we're loading
-        sparse_kv_num_blocks = tl.load(SPARSE_KV_NUM_BLKS + sparse_kv_num_blks_offset)
+            # SPARSE_KV_IDX and SPARSE_KV_NUM_BLKS are always contiguous.
+            sparse_hz_offset = sparse_idx_z * SM_H + sparse_idx_h
+            sparse_kv_num_blks_offset = sparse_hz_offset * SPARSE_Q_BLOCK_CNT + off_pid // SPARSE_Q_MULTIPLE
+            sparse_kv_idx_offset = sparse_hz_offset * SPARSE_Q_BLOCK_CNT * SPARSE_KV_BLOCK_CNT + (off_pid // SPARSE_Q_MULTIPLE) * SPARSE_KV_BLOCK_CNT  # noqa: B950
+            kv_indices = SPARSE_KV_IDX + sparse_kv_idx_offset
+            kv_start = tl.load(kv_indices) * SPARSE_KV_BLOCK_SIZE # first kv block we're loading
+            sparse_kv_num_blocks = tl.load(SPARSE_KV_NUM_BLKS + sparse_kv_num_blks_offset)
+            kv_num_n_blocks = sparse_kv_num_blocks * SPARSE_KV_MULTIPLE
+        else:
+            kv_start = 0
+            kv_num_n_blocks = KV_LEN // BLOCK_N2
 
         start_m2 = off_pid * BLOCK_M2
 
@@ -697,6 +746,7 @@ flex_attention_backward_template = TritonTemplate(
         start_n2 = kv_start
         offs_m2 = start_m2 + tl.arange(0, BLOCK_M2)
         offs_n2 = start_n2 + tl.arange(0, BLOCK_N2)
+        offs_hq2 = offs_m2 // (Q_LEN // GQA_SHARED_HEAD) + off_h * GQA_SHARED_HEAD
         kT_ptrs = K + offs_n2[None, :] * stride_km + offs_k[:, None] * stride_kd
         vT_ptrs = V + offs_n2[None, :] * stride_vm + offs_k[:, None] * stride_vd
         Di = tl.load(DELTA + offs_m2)
@@ -704,7 +754,7 @@ flex_attention_backward_template = TritonTemplate(
         tl.static_assert(BLOCK_M2 % BLOCK_N2 == 0)
 
         curr_n = start_n2
-        hi = sparse_kv_num_blocks * SPARSE_KV_MULTIPLE
+        hi = kv_num_n_blocks
         for start_n in range(0, hi):
             offs_n2= curr_n + tl.arange(0, BLOCK_N2)
             kT = tl.load(kT_ptrs)
@@ -714,12 +764,13 @@ flex_attention_backward_template = TritonTemplate(
             pre_mod_scores = qk
             m = offs_m2[:, None]
             n = offs_n2[None, :]
+            hq = offs_hq2[:, None]
             {{ modification(
                 subgraph_number=0,
                 output_name="post_mod_scores",
                 score="qk",
                 b="off_z",
-                h="off_h",
+                h="hq",
                 m="m",
                 n="n",
                 out="qk"
@@ -737,7 +788,7 @@ flex_attention_backward_template = TritonTemplate(
                 output_name = "grad_scores",
                 score="pre_mod_scores",
                 b="off_z",
-                h="off_h",
+                h="hq",
                 m="m",
                 n="n",
                 grad_score_mod="ds"
@@ -749,12 +800,15 @@ flex_attention_backward_template = TritonTemplate(
             dq += tl.dot(ds, tl.trans(kT))
 
             # Increment pointers.
-            indices_idx = start_n // SPARSE_KV_MULTIPLE
-            cur_block = tl.load(kv_indices + indices_idx)
-            next_block = tl.load(kv_indices + indices_idx + 1)
-            needs_jump = (start_n + 1) % SPARSE_KV_MULTIPLE == 0
-            jump_to_block = (next_block - cur_block ) * SPARSE_KV_BLOCK_SIZE - (SPARSE_KV_MULTIPLE - 1) * BLOCK_N2
-            offset = jump_to_block * needs_jump + (1 - needs_jump) * BLOCK_N2
+            if use_sparse_mask:
+                indices_idx = start_n // SPARSE_KV_MULTIPLE
+                cur_block = tl.load(kv_indices + indices_idx)
+                next_block = tl.load(kv_indices + indices_idx + 1)
+                needs_jump = (start_n + 1) % SPARSE_KV_MULTIPLE == 0
+                jump_to_block = (next_block - cur_block ) * SPARSE_KV_BLOCK_SIZE - (SPARSE_KV_MULTIPLE - 1) * BLOCK_N2
+                offset = jump_to_block * needs_jump + (1 - needs_jump) * BLOCK_N2
+            else:
+                offset = BLOCK_N2
 
             kT_ptrs += offset * stride_km
             vT_ptrs += offset * stride_km
@@ -766,20 +820,26 @@ flex_attention_backward_template = TritonTemplate(
         tl.store(dq_ptrs, dq)
     else:
         # THIS BLOCK DOES DK & DV
+        if use_sparse_mask:
+            SPARSE_Q_MULTIPLE = (SPARSE_Q_BLOCK_SIZE // BLOCK_M1)
+            SPARSE_KV_MULTIPLE = (SPARSE_KV_BLOCK_SIZE // BLOCK_N1)
 
-        SPARSE_Q_MULTIPLE = (SPARSE_Q_BLOCK_SIZE // BLOCK_M1)
-        SPARSE_KV_MULTIPLE = (SPARSE_KV_BLOCK_SIZE // BLOCK_N1)
+            SPARSE_Q_BLOCK_CNT = Q_LEN // SPARSE_Q_BLOCK_SIZE
+            SPARSE_KV_BLOCK_CNT = KV_LEN // SPARSE_KV_BLOCK_SIZE
 
-        SPARSE_Q_BLOCK_CNT = Q_LEN // SPARSE_Q_BLOCK_SIZE
-        SPARSE_KV_BLOCK_CNT = KV_LEN // SPARSE_KV_BLOCK_SIZE
+            # SPARSE_Q_IDX and SPARSE_Q_NUM_BLKS are always contiguous.
+            sparse_hz_offset = sparse_idx_z * SM_H + sparse_idx_h
+            sparse_q_num_blks_offset = sparse_hz_offset * SPARSE_KV_BLOCK_CNT + pid // SPARSE_KV_MULTIPLE
+            sparse_q_idx_offset = sparse_hz_offset * SPARSE_Q_BLOCK_CNT * SPARSE_KV_BLOCK_CNT + (pid // SPARSE_KV_MULTIPLE) * SPARSE_Q_BLOCK_CNT  # noqa: B950
+            q_indices = SPARSE_Q_IDX + sparse_q_idx_offset
+            q_start = tl.load(q_indices) * SPARSE_Q_BLOCK_SIZE # first q block we're loading
+            sparse_q_num_blocks = tl.load(SPARSE_Q_NUM_BLKS + sparse_q_num_blks_offset)
+            q_num_n_blocks = sparse_q_num_blocks * SPARSE_Q_MULTIPLE
+        else:
+            q_start = 0
+            q_num_n_blocks = Q_LEN // BLOCK_M1
 
-        # SPARSE_Q_IDX and SPARSE_Q_NUM_BLKS are always contiguous.
-        sparse_hz_offset = sparse_idx_z * SM_H + sparse_idx_h
-        sparse_q_num_blks_offset = sparse_hz_offset * SPARSE_KV_BLOCK_CNT + pid // SPARSE_KV_MULTIPLE
-        sparse_q_idx_offset = sparse_hz_offset * SPARSE_Q_BLOCK_CNT * SPARSE_KV_BLOCK_CNT + (pid // SPARSE_KV_MULTIPLE) * SPARSE_Q_BLOCK_CNT  # noqa: B950
-        q_indices = SPARSE_Q_IDX + sparse_q_idx_offset
-        q_start = tl.load(q_indices) * SPARSE_Q_BLOCK_SIZE # first q block we're loading
-        sparse_q_num_blocks = tl.load(SPARSE_Q_NUM_BLKS + sparse_q_num_blks_offset)
+
 
         start_n1 = pid * BLOCK_N1
         start_m1 = q_start
@@ -801,23 +861,25 @@ flex_attention_backward_template = TritonTemplate(
         tl.static_assert(BLOCK_N1 % BLOCK_M1 == 0)
 
         curr_m = start_m1
-        hi = sparse_q_num_blocks * SPARSE_Q_MULTIPLE
+        hi = q_num_n_blocks
         for start_m in range(0, hi):
             qT = tl.load(qT_ptrs)
             # Load LSE before computing qk to reduce pipeline stall.
             offs_m1 = curr_m + tl.arange(0, BLOCK_M1)
+            offs_hq1 = offs_m1 // (Q_LEN // GQA_SHARED_HEAD) + off_h * GQA_SHARED_HEAD
             lse = tl.load(LSE + offs_m1)
             qkT = tl.dot(k, qT)
             # ~~~~~~~~~~~~~~~~~~~ Apply score modification  ~~~~~~~~~~~~~~~~~~~
             m = offs_m1[None, :]
             n = offs_n1[:, None]
+            hq = offs_hq1[None, :]
             pre_mod_scores = qkT
             {{ modification(
                 subgraph_number=0,
                 output_name="post_mod_scores",
                 score="qkT",
                 b="off_z",
-                h="off_h",
+                h="hq",
                 m="m",
                 n="n",
                 out="qkT"
@@ -835,14 +897,12 @@ flex_attention_backward_template = TritonTemplate(
             dpT = tl.dot(v, tl.trans(do))
             dsT = pT * (dpT - Di[None, :])
             # ~~~~~~~~~~~~~~~~~~~ Apply joint modification  ~~~~~~~~~~~~~~~~~~~
-            m = offs_m1[None, :]
-            n = offs_n1[:, None]
             {{ modification(
                 subgraph_number=1,
                 output_name = "grad_scores",
                 score="pre_mod_scores",
                 b="off_z",
-                h="off_h",
+                h="hq",
                 m="m",
                 n="n",
                 grad_score_mod="dsT"
@@ -851,12 +911,15 @@ flex_attention_backward_template = TritonTemplate(
             # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             dk += tl.dot(dsT.to(MATMUL_PRECISION), tl.trans(qT))
             # Increment pointers.
-            indices_idx = start_m // SPARSE_Q_MULTIPLE
-            cur_block = tl.load(q_indices + indices_idx)
-            next_block = tl.load(q_indices + indices_idx + 1)
-            needs_jump = (start_m + 1) % SPARSE_Q_MULTIPLE == 0
-            jump_to_block = (next_block - cur_block ) * SPARSE_Q_BLOCK_SIZE - (SPARSE_Q_MULTIPLE - 1) * BLOCK_M1
-            offset = jump_to_block * needs_jump + (1 - needs_jump) * BLOCK_M1
+            if use_sparse_mask:
+                indices_idx = start_m // SPARSE_Q_MULTIPLE
+                cur_block = tl.load(q_indices + indices_idx)
+                next_block = tl.load(q_indices + indices_idx + 1)
+                needs_jump = (start_m + 1) % SPARSE_Q_MULTIPLE == 0
+                jump_to_block = (next_block - cur_block ) * SPARSE_Q_BLOCK_SIZE - (SPARSE_Q_MULTIPLE - 1) * BLOCK_M1
+                offset = jump_to_block * needs_jump + (1 - needs_jump) * BLOCK_M1
+            else:
+                offset = BLOCK_M1
 
             qT_ptrs += offset * stride_qm
             do_ptrs += offset * stride_qm
@@ -944,6 +1007,20 @@ def flex_attention_backward(*args, **kwargs):
         key.get_stride(),
     )
 
+    # In case of GQA, flatten out, lse grad_out and query along Hq//Hkv & Mq dimension
+    is_gqa = len(query.get_size()) > 4
+    gqa_shared_heads = 1  # Hq // Hkv
+    if is_gqa:
+        gqa_shared_heads = query.get_size()[2]
+        flattened_q_shape = query.get_size()[:2] + [
+            query.get_size()[-3] * query.get_size()[-2],
+            query.get_size()[-1],
+        ]
+        query = lowerings[aten.reshape](query, flattened_q_shape)
+        logsumexp = lowerings[aten.reshape](logsumexp, flattened_q_shape[:-1])
+        out = lowerings[aten.reshape](out, flattened_q_shape)
+        grad_out = lowerings[aten.reshape](grad_out, flattened_q_shape)
+
     # Create delta which will is needed for the bwd's kernel
     mul_delta = lowerings[aten.mul](out, grad_out)
     delta = lowerings[aten.sum](mul_delta, axis=-1)
@@ -969,13 +1046,14 @@ def flex_attention_backward(*args, **kwargs):
                         configs.append((BLOCK1, BLOCK2, w, s))
 
     for BLOCK1, BLOCK2, num_warps, num_stages in configs:
-        if (
-            SPARSE_KV_BLOCK_SIZE % BLOCK1 != 0
-            or SPARSE_Q_BLOCK_SIZE % BLOCK1 != 0
-            or SPARSE_KV_BLOCK_SIZE % BLOCK2 != 0
-            or SPARSE_Q_BLOCK_SIZE % BLOCK2 != 0
-        ):
-            continue
+        if SPARSE_Q_BLOCK_SIZE != 0 and SPARSE_KV_BLOCK_SIZE != 0:  # if use sparse mask
+            if (
+                SPARSE_KV_BLOCK_SIZE % BLOCK1 != 0
+                or SPARSE_Q_BLOCK_SIZE % BLOCK1 != 0
+                or SPARSE_KV_BLOCK_SIZE % BLOCK2 != 0
+                or SPARSE_Q_BLOCK_SIZE % BLOCK2 != 0
+            ):
+                continue
 
         flex_attention_backward_template.maybe_append_choice(
             choices=choices,
@@ -1005,6 +1083,7 @@ def flex_attention_backward(*args, **kwargs):
             BLOCK_M2=BLOCK2,
             BLOCK_N2=BLOCK1,
             BLOCK_DMODEL=query.get_size()[-1],
+            GQA_SHARED_HEAD=gqa_shared_heads,
             # For now, we always assume the "sound" option
             SCORE_MOD_IS_LINEAR=False,
             SPARSE_Q_BLOCK_SIZE=SPARSE_Q_BLOCK_SIZE,
@@ -1029,6 +1108,13 @@ def flex_attention_backward(*args, **kwargs):
     grad_key = autotune_select_algorithm(
         "flex_attention_backward", choices, inputs_for_autotuning, layout_k
     )
+
+    # In case of gqa, restore flattened Hkv//Hq, Mq shape for grad_query
+    # [B, Hkv, Hq//Hk*Mq, D] -> [B, Hkv, Hq//Hkv, Mq, D]
+    if is_gqa:
+        og_q_shape = out.get_size()[:2] + [gqa_shared_heads, -1, out.get_size()[-1]]
+        grad_query = lowerings[aten.view](grad_query, og_q_shape)
+
     return (
         grad_query,
         grad_key,

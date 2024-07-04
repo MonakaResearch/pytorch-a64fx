@@ -131,6 +131,11 @@ def math_attention(
     """
     working_precision = torch.float64 if query.dtype == torch.float64 else torch.float32
 
+    is_gqa = query.dim() > 4
+    if is_gqa:  # in case of gqa
+        og_q_shape = query.shape
+        query = torch.flatten(query, start_dim=-3, end_dim=-2)
+
     scores = (query @ key.transpose(-2, -1)).to(dtype=working_precision)
 
     b = torch.arange(0, scores.size(0), device=scores.device)
@@ -155,7 +160,13 @@ def math_attention(
 
     scores = scores.softmax(dim=-1)
 
-    return scores.to(query.dtype) @ value, logsumexp
+    output = scores.to(query.dtype) @ value
+
+    if is_gqa:
+        output = output.view(og_q_shape)
+        logsumexp = logsumexp.view(og_q_shape[:-1])
+
+    return output, logsumexp
 
 
 @flex_attention.py_impl(DispatchKey.CompositeExplicitAutograd)
@@ -327,10 +338,7 @@ def flex_attention_fake_tensor_mode(
     *other_buffers: Tuple[torch.Tensor, ...],
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     with mode:
-        batch_size, num_heads, seq_len_q, _ = query.shape
-        logsumexp = query.new_empty(
-            batch_size, num_heads, seq_len_q, dtype=torch.float32
-        )
+        logsumexp = query.new_empty(query.shape[:-1], dtype=torch.float32)
         return torch.empty_like(query), logsumexp
 
 
@@ -547,6 +555,13 @@ def sdpa_dense_backward(
     *other_buffers: torch.Tensor,
 ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     working_precision = torch.float64 if query.dtype == torch.float64 else torch.float32
+    is_gqa = query.dim() > 4
+    if is_gqa:  # in case of gqa
+        og_q_shape = query.shape
+        query = torch.flatten(query, start_dim=-3, end_dim=-2)
+        out = torch.flatten(out, start_dim=-3, end_dim=-2)
+        logsumexp= torch.flatten(logsumexp, start_dim=-2, end_dim=-1)
+        grad_out = torch.flatten(grad_out, start_dim=-3, end_dim=-2)
     scores = (query @ key.transpose(-2, -1)).to(working_precision)
 
     b = torch.arange(0, scores.size(0), device=scores.device)
@@ -605,6 +620,9 @@ def sdpa_dense_backward(
 
     grad_query = grad_scores @ key
     grad_key = grad_scores.transpose(-2, -1) @ query
+
+    if is_gqa:
+        grad_query = grad_query.view(og_q_shape)
     return grad_query.contiguous(), grad_key.contiguous(), grad_value.contiguous()
 
 
