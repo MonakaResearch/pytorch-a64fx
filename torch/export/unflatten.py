@@ -800,7 +800,6 @@ class _ModuleFrame:
         # To avoid this we copy these call_function nodes with sym_type results.
         # This should however only be done for sym_type nodes - call_function nodes on tensors
         # should not be deduplicated in the first place.
-        assert isinstance(x.meta["val"], py_sym_types)
         args = tuple(
             self.remap_input(_x) if isinstance(_x, torch.fx.Node) else _x
             for _x in x.args
